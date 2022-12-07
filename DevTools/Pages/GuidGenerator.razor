@@ -1,0 +1,144 @@
+﻿@page "/guidhelpers"
+@inject IJSRuntime JSRuntime
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <b>Guid Generator</b>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-3 text-right">
+                            <button @onclick="GenerateGuid" class="btn btn-primary">Generate New Guid</button>
+                        </div>
+                        <div class="col-7">
+                            <textarea @bind="NewGuid" class="form-control" rows="1" @onclick="@(() => CopyText(NewGuid))"> </textarea>
+                        </div>
+                        <div class="col-2">
+                            <input @bind="AutoCopy" style="margin-top: 10px" type="checkbox" /> Auto Copy
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <b> Guid from long and int</b>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-4">
+                            <label for="longInput">Long Input</label>
+                            <input type="text" @bind="LongInput" class="form-control" name="longInput" id="longInput" />
+                        </div>
+                        <div class="col-4">
+                            <label for="intInput">Int Input</label>
+                            <input type="text" @bind="IntInput" class="form-control" name="intInput" id="intInput" />
+                        </div>
+                        <div class="col-4 text-center">
+                            <button @onclick="GuidFromLongAndInt" class="btn btn-primary mt-4">Generate</button>
+                        </div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col">
+                            <b> Result: <textarea @bind="LongIntToGuidResult" disabled class="form-control" rows="1" @onclick="@(() => CopyText(LongIntToGuidResult))"> </textarea></b>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="row mt-5">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <b> Split Guid to long and int</b>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-2 mt-1">
+                            Input Guid:
+                        </div>
+                        <div class="col-8">
+                           <input type="text" @bind="Section3GuidInput" class="form-control" name="longInput" id="sec3LongInput" />
+                        </div>
+                        <div class="col-2">
+                            <button @onclick="SplitGuidToLongAndInt" class="btn btn-primary">Generate</button>
+                        </div>
+                    </div>
+                    <div class="row mt-4 mx-5">
+                        <div class="col-6">
+                            <b>Long Result: <textarea @bind="Section3LongResult" disabled class="form-control" rows="1" @onclick="@(() => CopyText(Section3LongResult))"> </textarea></b>
+                        </div>
+                        <div class="col-6">
+                            <b>Int Result: <textarea @bind="Section3IntResult" disabled class="form-control" rows="1" @onclick="@(() => CopyText(Section3IntResult))"> </textarea></b>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    public string NewGuid { get; set; } = Guid.NewGuid().ToString();
+    public bool AutoCopy { get; set; }
+
+    public string LongInput { get; set; }
+    public string IntInput { get; set; }
+    public string LongIntToGuidResult { get; set; }
+
+    public string Section3GuidInput { get; set; }
+    public string Section3LongResult { get; set; }
+    public string Section3IntResult { get; set; }
+
+    private async Task GenerateGuid()
+    {
+        NewGuid = Guid.NewGuid().ToString();
+
+        if (AutoCopy)
+        {
+            await CopyText(NewGuid);
+        }
+    }
+
+    private async Task GuidFromLongAndInt()
+    {
+        long.TryParse(LongInput, out long parsedLong);
+        int.TryParse(IntInput, out int parsedInt);
+
+        if (parsedInt > 0 && parsedLong > 0)
+        {
+            var bytes = new byte[16];
+            BitConverter.GetBytes(parsedLong).CopyTo(bytes, 0);
+            BitConverter.GetBytes(parsedInt).CopyTo(bytes, 12);
+
+            LongIntToGuidResult = new Guid(bytes).ToString();
+
+            await CopyText(LongIntToGuidResult);
+        }
+    }
+
+    private async Task SplitGuidToLongAndInt()
+    {
+        var isParseSuccess = Guid.TryParse(Section3GuidInput, out Guid parsedGuid);
+
+        if (isParseSuccess)
+        {
+            var gb = parsedGuid.ToByteArray();
+
+            Section3LongResult = BitConverter.ToInt64(gb, 0).ToString();
+            Section3IntResult = BitConverter.ToInt32(gb, 12).ToString();
+        }
+    }
+
+    private async Task CopyText(string text)
+    {
+        await JSRuntime.InvokeVoidAsync("clipboardCopy.copyText", text);
+    }
+}

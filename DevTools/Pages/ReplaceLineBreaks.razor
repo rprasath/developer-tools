@@ -1,0 +1,79 @@
+﻿@page "/replacelinebreaks"
+
+<h3>Replace Line Breaks</h3>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label for="inputTxt"></label>
+                <textarea @bind="Input" class="form-control" id="inputTxt" rows="10"> </textarea>
+            </div>
+
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div style="margin-top: 20px">
+                <button @onclick="CreateSQLTemp" class="btn btn-primary">Create SQL Temp</button>
+                <button @onclick="CommaSeperation" class="btn btn-primary">Comma Seperation</button>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label for="outputTxt"></label>
+                <textarea @bind="Output" class="form-control" id="outputTxt" rows="10"> </textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    public string Input { get; set; }
+    public string Output { get; set; }
+
+    private void CreateSQLTemp()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        var input = Input.Replace(Environment.NewLine, ",");
+        var rows = input.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        var chunkedRows = rows.Select((x, i) => new { Index = i, Value = x })
+                             .GroupBy(x => x.Index / 950)
+                             .Select(x => x.Select(v => v.Value).ToList())
+                             .ToList();
+
+        System.Text.StringBuilder builder = new System.Text.StringBuilder();
+        builder.AppendLine("create table #tempdata (Id nvarchar(100) not null)");
+
+        foreach (var item in chunkedRows)
+        {
+            builder.AppendLine();
+            builder.AppendLine("insert into #tempdata values");
+            builder.AppendLine("('" + string.Join("'),('", item) + "')");
+        }
+
+        Output = builder.ToString();
+    }
+
+    private void CommaSeperation()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        var input = Input.Replace(Environment.NewLine, ",");
+        var rows = input.Split(',', StringSplitOptions.RemoveEmptyEntries);
+
+        Output = string.Join(",", rows);
+    }
+}

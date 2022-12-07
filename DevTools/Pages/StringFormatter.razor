@@ -1,0 +1,75 @@
+﻿@page "/stringformatter"
+@using Newtonsoft.Json
+@using NSQLFormatter
+
+<h3>String Formatters</h3>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label for="inputTxt"></label>
+                <textarea @bind="Input" class="form-control" id="inputTxt" rows="10"> </textarea>
+            </div>
+
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div style="margin-top: 20px">
+                <button @onclick="FormatJson" class="btn btn-primary">Format Json</button>
+                <button @onclick="FormatSQL" class="btn btn-primary">Format SQL</button>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label for="outputTxt"></label>
+                <textarea @bind="Output" class="form-control" id="outputTxt" rows="10"> </textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+@code {
+    public string Input { get; set; }
+    public string Output { get; set; }
+
+    private void FormatJson()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        try
+        {
+            dynamic parsedJson = JsonConvert.DeserializeObject(Input);
+            Output = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
+        }
+        catch
+        {
+            Output = "Error";
+        }
+    }
+
+    private void FormatSQL()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        try
+        {
+            Output = NSQLFormatter.Formatter.Format(Input);
+        }
+        catch
+        {
+            Output = "Error";
+        }
+    }
+}
