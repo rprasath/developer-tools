@@ -5,8 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <ServiceWorkerAssetsManifest>service-worker-assets.js</ServiceWorkerAssetsManifest>
+    <GHPagesBase>https://www.prasathramasamy.com/developer-tools/</GHPagesBase>
   </PropertyGroup>
-
+  
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'https' ">
     <ExternalConsole>true</ExternalConsole>
   </PropertyGroup>
@@ -19,6 +20,7 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <PackageReference Include="NSQLFormatter" Version="2.0.0" />
     <PackageReference Include="System.Net.Http.Json" Version="7.0.0" />
+    <PackageReference Include="PublishSPAforGitHubPages.Build" Version="2.0.2" />
   </ItemGroup>
 
   <ItemGroup>
@@ -29,5 +31,6 @@
     <None Remove="Newtonsoft.Json" />
     <None Remove="NSQLFormatter" />
     <None Remove="System.Net.Http.Json" />
+    <None Remove="PublishSPAforGitHubPages.Build" />
   </ItemGroup>
 </Project>
