@@ -1,8 +1,6 @@
-﻿@page "/stringformatter"
-@using Newtonsoft.Json
-@using NSQLFormatter
+﻿@page "/base64encode"
 
-<h3>String Formatters</h3>
+<h3>Base64 Encode/Decode</h3>
 
 <div class="container-fluid">
     <div class="row">
@@ -17,8 +15,8 @@
     <div class="row">
         <div class="col">
             <div style="margin-top: 20px">
-                <button @onclick="FormatJson" class="btn btn-primary">Format Json</button>
-                <button @onclick="FormatSQL" class="btn btn-primary">Format SQL</button>
+                <button @onclick="EncodeText" class="btn btn-primary">Encode</button>
+                <button @onclick="DecodeText" class="btn btn-primary">Decode</button>
             </div>
         </div>
     </div>
@@ -38,25 +36,16 @@
     public string? Input { get; set; }
     public string? Output { get; set; }
 
-    private void FormatJson()
+    private void EncodeText()
     {
         if (string.IsNullOrWhiteSpace(Input))
         {
             return;
         }
-
-        try
-        {
-            dynamic? parsedJson = JsonConvert.DeserializeObject(Input);
-            Output = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
-        }
-        catch
-        {
-            Output = "Error";
-        }
+        Output = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Input));
     }
 
-    private void FormatSQL()
+    private void DecodeText()
     {
         if (string.IsNullOrWhiteSpace(Input))
         {
@@ -65,11 +54,11 @@
 
         try
         {
-            Output = NSQLFormatter.Formatter.Format(Input);
+            Output = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(Input));
         }
-        catch
+        catch (Exception ex)
         {
-            Output = "Error";
+            Output = ex.ToString();
         }
     }
 }

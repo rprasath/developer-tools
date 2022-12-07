@@ -1,6 +1,58 @@
-﻿<h3>Component1</h3>
+﻿@page "/urlencode"
+
+<h3>URL Encode/Decode</h3>
+
+<div class="container-fluid">
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label for="inputTxt"></label>
+                <textarea @bind="Input" class="form-control" id="inputTxt" rows="10"> </textarea>
+            </div>
+
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div style="margin-top: 20px">
+                <button @onclick="EncodeText" class="btn btn-primary">Encode</button>
+                <button @onclick="DecodeText" class="btn btn-primary">Decode</button>
+            </div>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div class="form-group">
+                <label for="outputTxt"></label>
+                <textarea @bind="Output" class="form-control" id="outputTxt" rows="10"> </textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 
 @code {
+    public string? Input { get; set; }
+    public string? Output { get; set; }
 
+    private void EncodeText()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        Output = System.Net.WebUtility.UrlEncode(Input);
+    }
+
+    private void DecodeText()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        Output = System.Net.WebUtility.UrlDecode(Input);
+    }
 }
-

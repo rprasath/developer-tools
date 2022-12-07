@@ -65,7 +65,7 @@
                             Input Guid:
                         </div>
                         <div class="col-8">
-                           <input type="text" @bind="Section3GuidInput" class="form-control" name="longInput" id="sec3LongInput" />
+                            <input type="text" @bind="Section3GuidInput" class="form-control" name="longInput" id="sec3LongInput" />
                         </div>
                         <div class="col-2">
                             <button @onclick="SplitGuidToLongAndInt" class="btn btn-primary">Generate</button>
@@ -89,13 +89,13 @@
     public string NewGuid { get; set; } = Guid.NewGuid().ToString();
     public bool AutoCopy { get; set; }
 
-    public string LongInput { get; set; }
-    public string IntInput { get; set; }
-    public string LongIntToGuidResult { get; set; }
+    public string? LongInput { get; set; }
+    public string? IntInput { get; set; }
+    public string? LongIntToGuidResult { get; set; }
 
-    public string Section3GuidInput { get; set; }
-    public string Section3LongResult { get; set; }
-    public string Section3IntResult { get; set; }
+    public string? Section3GuidInput { get; set; }
+    public string? Section3LongResult { get; set; }
+    public string? Section3IntResult { get; set; }
 
     private async Task GenerateGuid()
     {
@@ -124,7 +124,7 @@
         }
     }
 
-    private async Task SplitGuidToLongAndInt()
+    private void SplitGuidToLongAndInt()
     {
         var isParseSuccess = Guid.TryParse(Section3GuidInput, out Guid parsedGuid);
 
@@ -137,8 +137,13 @@
         }
     }
 
-    private async Task CopyText(string text)
+    private async Task CopyText(string? text)
     {
+        if (string.IsNullOrEmpty(text))
+        {
+            return;
+        }
+
         await JSRuntime.InvokeVoidAsync("clipboardCopy.copyText", text);
     }
 }
