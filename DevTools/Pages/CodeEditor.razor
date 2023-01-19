@@ -1,0 +1,45 @@
+﻿@page "/code-editor"
+
+<h3>Javascript Editor</h3>
+
+<div>
+    <div style="margin:10px 0;">
+        Theme:
+        <select @onchange="ChangeTheme">
+            <option value="vs">Visual Studio</option>
+            <option value="vs-dark">Visual Studio Dark</option>
+            <option value="hc-black">High Contrast Black</option>
+        </select>
+    </div>
+    <div>
+        <MonacoEditor Id="code-editor" ConstructionOptions="EditorConstructionOptions" />
+    </div>
+</div>
+
+<style>
+    .monaco-editor-container {
+        height: 70vh;
+        border: 1px solid gray;
+    }
+</style>
+
+@code {
+    private StandaloneEditorConstructionOptions EditorConstructionOptions(MonacoEditor editor)
+    {
+        return new StandaloneEditorConstructionOptions
+            {
+                Language = "javascript",
+                Value = "",
+                AutoIndent = true,
+                FormatOnPaste = true,
+                FormatOnType = true,
+                ShowUnused = true,
+                MatchBrackets = true,
+            };
+    }
+
+    private async Task ChangeTheme(ChangeEventArgs e)
+    {
+        await MonacoEditor.SetTheme(e.Value?.ToString());
+    }
+}

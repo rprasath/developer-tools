@@ -1,0 +1,61 @@
+﻿@page "/compare"
+
+<h3>Diff Editor</h3>
+
+<div style="min-width: 90%;min-height: 90vh;">
+    <MonacoDiffEditor @ref="_diffEditor" Id="diff-editor" ConstructionOptions="DiffEditorConstructionOptions" OnDidInit="EditorOnDidInit" />
+</div>
+
+<style>
+    .monaco-editor-container {
+        height: 90vh;
+        border: 1px solid gray;
+    }
+</style>
+
+@code {
+    private MonacoDiffEditor? _diffEditor { get; set; }
+
+    private DiffEditorConstructionOptions DiffEditorConstructionOptions(MonacoDiffEditor editor)
+    {
+        return new DiffEditorConstructionOptions
+            {
+                OriginalEditable = true,
+                EnableSplitViewResizing = true,
+                //Dimension = new Dimension
+                //{
+                //    Height = 800,
+                //    Width = 1200
+                //}
+            };
+    }
+
+    private async Task EditorOnDidInit(MonacoEditorBase editor)
+    {
+        if(_diffEditor == null)
+        {
+            return;
+        }
+        
+        // Get or create the original model
+        TextModel original_model = await MonacoEditorBase.GetModel("editor-originalModel");
+        if (original_model == null)
+        {
+            original_model = await MonacoEditorBase.CreateModel("", "json", "editor-originalModel");
+        }
+
+        // Get or create the modified model
+        TextModel modified_model = await MonacoEditorBase.GetModel("editor-modifiedModel");
+        if (modified_model == null)
+        {
+            modified_model = await MonacoEditorBase.CreateModel("", "json", "editor-modifiedModel");
+        }
+
+        // Set the editor model
+        await _diffEditor.SetModel(new DiffEditorModel
+            {
+                Original = original_model,
+                Modified = modified_model
+            });
+    }
+}

@@ -1,7 +1,7 @@
-﻿@page "/jsondiff"
+﻿@page "/jsoneditsort"
 @using Newtonsoft.Json.Linq;
-@using System.Text;
 @using Newtonsoft.Json;
+@using System.Text;
 
 <h3>Replace Line Breaks</h3>
 
@@ -81,24 +81,21 @@
             var sortedInput1 = RemoveAndSortInternal(parsedInput1);
             var sortedInput2 = RemoveAndSortInternal(parsedInput2);
 
-            var diff = JsonDiffer.JsonDifferentiator.Differentiate(sortedInput1, sortedInput2);
-            Output = diff?.ToString() ?? "No Difference";
+            StringBuilder builder = new StringBuilder();
+            var j2Count = sortedInput2.Count;
+            for (int i = 0; i < sortedInput1.Count; i++)
+            {
+                var firstObj = sortedInput1[i];
+                var secondObject = CompareKey != null ? sortedInput2.FirstOrDefault(e => e[CompareKey]?.ToString() == firstObj[CompareKey]?.ToString()) : sortedInput2[i];
 
-            //StringBuilder builder = new StringBuilder();
-            //var j2Count = sortedInput2.Count;
-            //for (int i = 0; i < sortedInput1.Count; i++)
-            //{
-            //    var firstObj = sortedInput1[i];
-            //    var secondObject = CompareKey != null ? sortedInput2.FirstOrDefault(e => e[CompareKey]?.ToString() == firstObj[CompareKey]?.ToString()) : sortedInput2[i];
+                var diff = JsonDiffer.JsonDifferentiator.Differentiate(firstObj, secondObject, outputMode: JsonDiffer.OutputMode.Detailed, true);
+                if (diff != null)
+                {
+                    builder.AppendLine(diff.ToString());
+                }
+            }
 
-            //    var diff = JsonDiffer.JsonDifferentiator.Differentiate(firstObj, secondObject, outputMode: JsonDiffer.OutputMode.Detailed, true);
-            //    if (diff != null)
-            //    {
-            //        builder.AppendLine(diff.ToString());
-            //    }
-            //}
-
-            //Output = builder.ToString();
+            Output = builder.ToString();
         }
         catch(Exception ex)
         {
