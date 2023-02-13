@@ -8,7 +8,7 @@
   "resources": {
     "assembly": {
       "BlazorMonaco.dll": "sha256-azr7uUonDjjxaCvj\/fd9X9dbiRNGuuqGzG46\/\/k9G0o=",
-      "DevTools.dll": "sha256-H\/B3Aq6SRZrg3wwzR\/Pd2\/rhPuhCWt2hEWrupf93uCw=",
+      "DevTools.dll": "sha256-U+m42yIc7y3JoQOTMBmvCHn5Rrvrqp9BvpO994ciSts=",
       "JsonDiffer.dll": "sha256-5NwyxKTbL1j1oUvQ3LMUFNjkXe1lVxZxOnytVTAEcg4=",
       "Microsoft.AspNetCore.Components.dll": "sha256-0XsxJbrxDONAYujE9xqnj6Xnh+AMJ18Km7t2Hm4P7ck=",
       "Microsoft.AspNetCore.Components.Web.dll": "sha256-CqjgLzzZwv7F4s+S4K1bhK5MxHLAwzuuHeDyIpP2bQg=",
@@ -41,7 +41,7 @@
       "System.dll": "sha256-SE5w0R\/2966FzzsrP\/SGXRHMfA1K21SGrJ+nuGYJHSg=",
       "System.Drawing.dll": "sha256-WX7ik+1VtfbQYVa\/Zk2GXVV2QB7gG0wusoM\/PDBGsNw=",
       "System.Drawing.Primitives.dll": "sha256-qipW5t+jmEB6C9ycs+QUMaxS7uKaYqflnRbyic2Lzlo=",
-      "System.Linq.dll": "sha256-JcQcR++lZT1NFtmUTiZggvW5grGLuXlUoIq\/ueez794=",
+      "System.Linq.dll": "sha256-r+3D+\/JLVXRjghoq24VgWBQ5NjWk1pFnYVID3rQ4bCw=",
       "System.Linq.Expressions.dll": "sha256-9VpsDK9t9Mqlg8TUZUpJ+jALReWcqY9nUDGahQmDh\/4=",
       "System.Memory.dll": "sha256-24TCdrD9zDZ0D9STpXgm4VXQdyLeSaA1zOSWlH8t+j4=",
       "System.Net.Http.dll": "sha256-Spt8KDLKXCv75kqdE9ftz+gL\/FjocRSlyZJwlwf54Lg=",
@@ -54,7 +54,7 @@
       "System.Reflection.Emit.ILGeneration.dll": "sha256-HFu43G8bigHUbOENpua+SlqWXXlxj8v28eSKjjeavKE=",
       "System.Reflection.Emit.Lightweight.dll": "sha256-vWJM2FI0Ri8W+YL3MSgI+1IcOyA3IGzAviFURYfhdL8=",
       "System.Reflection.Primitives.dll": "sha256-Z1Glo3fYrFj5PG6eEA3ihppg4r0AQQb4GgtwGHvhzEQ=",
-      "System.Runtime.dll": "sha256-sFDoEQ\/j87I2CVXdieGyQndKt907S2gl6m\/80A\/7lT8=",
+      "System.Runtime.dll": "sha256-qdFyefX6itkJ3t8Vcbwdjf57AH7lqp6BtA7wLMN13jY=",
       "System.Runtime.InteropServices.dll": "sha256-0OxfHOYyfSsuPDmx1oxVHBxzm+oLiXWzivJvkG78lDI=",
       "System.Runtime.InteropServices.JavaScript.dll": "sha256-BPqE6NqU82guV5Qguh5jIghbFK\/CaIYUARPOd6Bsz5M=",
       "System.Runtime.Numerics.dll": "sha256-0v0bnAvai\/z0hfbAAAV2OWrwkjhe\/sLDEUVw+uJVlbM=",

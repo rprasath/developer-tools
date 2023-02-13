@@ -93,7 +93,7 @@
       "url": "_framework\/icudt.dat.br"
     },
     {
-      "hash": "sha256-665XHoUK\/h7RXJ8NZ4cLwCzCmB0I4LnZCvKBrXU+SO0=",
+      "hash": "sha256-ZmemCTQoYcXWWSrW6MzOvmOnQNIRZ+sv9Y9ENciTsk0=",
       "url": "_framework\/blazor.boot.json.br"
     },
     {
@@ -101,7 +101,7 @@
       "url": "_framework\/BlazorMonaco.dll.br"
     },
     {
-      "hash": "sha256-KRaEC17AiirCvz9s3wWfpb3MYXKLA+E4E\/p8oKtBOAo=",
+      "hash": "sha256-2Wp+69Tr7C9AZzvfNjLSa1ahRjCEur3Lq+C9ERPcnKI=",
       "url": "_framework\/DevTools.dll.br"
     },
     {
@@ -233,7 +233,7 @@
       "url": "_framework\/System.Drawing.Primitives.dll.br"
     },
     {
-      "hash": "sha256-BdSRTnb3owF1UiU\/PY\/XOzIG95DnbcNrF3MgDC9Kn1I=",
+      "hash": "sha256-8v8DdRAfIg\/evaah3JwCuxENx8s8z2LLh3NjkqADmxA=",
       "url": "_framework\/System.Linq.dll.br"
     },
     {
@@ -285,7 +285,7 @@
       "url": "_framework\/System.Reflection.Primitives.dll.br"
     },
     {
-      "hash": "sha256-wMPxbXd\/oyKSlXjl77SKRys32BBsKEDgO7XION2LJJE=",
+      "hash": "sha256-vb1QYsPNfkcUGmPoXUEgZIBIHYZWKklQLsEn\/O+0jGY=",
       "url": "_framework\/System.Runtime.dll.br"
     },
     {
@@ -1141,5 +1141,5 @@
       "url": "brotliloader.min.js"
     }
   ],
-  "version": "XBBJYxGb"
+  "version": "U0ROzcWi"
 };
