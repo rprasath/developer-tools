@@ -16,7 +16,10 @@
         <div class="col">
             <div style="margin-top: 20px">
                 <button @onclick="CreateSQLTemp" class="btn btn-primary">Create SQL Temp</button>
+                <button @onclick="CreateMultiColumnSQLTemp" class="btn btn-primary">Create Multi Column SQL Temp</button>
                 <button @onclick="CommaSeperation" class="btn btn-primary">Comma Seperation</button>
+                <button @onclick="CommaSeperationWithQuotes" class="btn btn-primary">Distinct Quoted Comma Seperation</button>
+                <button @onclick="DistinctSort" class="btn btn-primary">Distinct Sort</button>
             </div>
         </div>
     </div>
@@ -64,6 +67,55 @@
         Output = builder.ToString();
     }
 
+    private void CreateMultiColumnSQLTemp()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        try
+        {
+            var rows = Input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+
+            var columHeaders = rows[0].Split('\t', StringSplitOptions.RemoveEmptyEntries);
+
+            System.Text.StringBuilder builder = new System.Text.StringBuilder();
+            builder.Append("create table #tempdata (");
+
+            System.Text.StringBuilder colBuilder = new System.Text.StringBuilder();
+            foreach (var item in columHeaders)
+            {
+                colBuilder.Append($"{item} nvarchar(100) null,");
+            }
+
+            builder.Append(colBuilder.ToString().Trim(','));
+            builder.AppendLine(")");
+
+            foreach (var item in rows.Skip(1))
+            {
+                //builder.AppendLine();
+                builder.Append("insert into #tempdata values (");
+
+                var rowDatas = item.Split('\t', StringSplitOptions.RemoveEmptyEntries);
+                System.Text.StringBuilder rowBuilder = new System.Text.StringBuilder();
+                foreach (var col in rowDatas)
+                {
+                    rowBuilder.Append($"'{col}',");
+                }
+                builder.Append(rowBuilder.ToString().Trim(','));
+                builder.AppendLine(")");
+            }
+            builder.AppendLine();
+
+            Output = builder.ToString();
+        }
+        catch(Exception ex)
+        {
+            Output = ex.ToString();
+        }
+    }
+
     private void CommaSeperation()
     {
         if (string.IsNullOrWhiteSpace(Input))
@@ -75,5 +127,30 @@
         var rows = input.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
         Output = string.Join(",", rows);
+    }
+
+    private void CommaSeperationWithQuotes()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        var input = Input.Replace(Environment.NewLine, ",");
+        var rows = Input.Split(',', StringSplitOptions.RemoveEmptyEntries).Distinct().OrderBy(e => e);
+
+        Output = $"'{string.Join("','", rows)}'";
+    }
+
+    private void DistinctSort()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        var rows = Input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Distinct().OrderBy(e => e);
+
+        Output = string.Join(Environment.NewLine, rows);
     }
 }
