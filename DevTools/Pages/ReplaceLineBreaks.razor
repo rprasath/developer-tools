@@ -15,11 +15,11 @@
     <div class="row">
         <div class="col">
             <div style="margin-top: 20px">
-                <button @onclick="CreateSQLTemp" class="btn btn-primary">Create SQL Temp</button>
-                <button @onclick="CreateMultiColumnSQLTemp" class="btn btn-primary">Create Multi Column SQL Temp</button>
-                <button @onclick="CommaSeperation" class="btn btn-primary">Comma Seperation</button>
-                <button @onclick="CommaSeperationWithQuotes" class="btn btn-primary">Distinct Quoted Comma Seperation</button>
-                <button @onclick="DistinctSort" class="btn btn-primary">Distinct Sort</button>
+                <button @onclick="CreateSQLTemp" class="btn btn-primary">SQL Query</button>
+                <button @onclick="CreateMultiColumnSQLTemp" class="btn btn-primary">Multi Column SQL Query</button>
+                <button @onclick="CommaSeperation" class="btn btn-primary">Comma Seperate</button>
+                <button @onclick="CommaSeperationWithQuotes" class="btn btn-primary">Comma Seperate (Distinct, Quote)</button>
+                <button @onclick="DistinctSort" class="btn btn-primary">Sort (Distinct)</button>
             </div>
         </div>
     </div>
@@ -123,8 +123,8 @@
             return;
         }
 
-        var input = Input.Replace(Environment.NewLine, ",");
-        var rows = input.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var commaSeperatedInput = Input.Replace(Environment.NewLine, ",");
+        var rows = commaSeperatedInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
         Output = string.Join(",", rows);
     }
@@ -136,8 +136,8 @@
             return;
         }
 
-        var input = Input.Replace(Environment.NewLine, ",");
-        var rows = Input.Split(',', StringSplitOptions.RemoveEmptyEntries).Distinct().OrderBy(e => e);
+        var commaSeperatedInput = Input.Replace(Environment.NewLine, ",");
+        var rows = commaSeperatedInput.Split(',', StringSplitOptions.RemoveEmptyEntries).Distinct().OrderBy(e => e);
 
         Output = $"'{string.Join("','", rows)}'";
     }

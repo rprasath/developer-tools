@@ -17,8 +17,14 @@
     <div class="row">
         <div class="col">
             <div style="margin-top: 20px">
-                <button @onclick="FormatJson" class="btn btn-primary">Format Json</button>
-                <button @onclick="FormatSQL" class="btn btn-primary">Format SQL</button>
+                <button @onclick="FormatJson" class="btn btn-primary">Json</button>
+                <button @onclick="FormatSQL" class="btn btn-primary">SQL</button>
+                <button @onclick="Upper" class="btn btn-primary">Upper</button>
+                <button @onclick="Lower" class="btn btn-primary">Lower</button>
+                <button @onclick="Base64EncodeText" class="btn btn-primary">Base64 Encode</button>
+                <button @onclick="Base64DecodeText" class="btn btn-primary">base64 Decode</button>
+                <button @onclick="URLEncodeText" class="btn btn-primary">URL Encode</button>
+                <button @onclick="URLDecodeText" class="btn btn-primary">URL Decode</button>
             </div>
         </div>
     </div>
@@ -71,5 +77,61 @@
         {
             Output = "Error";
         }
+    }
+
+    private void Upper()
+    {
+        Output = Input?.ToUpper();
+    }
+
+    private void Lower()
+    {
+        Output = Input?.ToLower();
+    }
+
+    private void Base64EncodeText()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+        Output = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Input));
+    }
+
+    private void Base64DecodeText()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        try
+        {
+            Output = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(Input));
+        }
+        catch (Exception ex)
+        {
+            Output = ex.ToString();
+        }
+    }
+
+    private void URLEncodeText()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        Output = System.Net.WebUtility.UrlEncode(Input);
+    }
+
+    private void URLDecodeText()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        Output = System.Net.WebUtility.UrlDecode(Input);
     }
 }

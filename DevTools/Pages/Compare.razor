@@ -1,9 +1,11 @@
 ﻿@page "/compare"
+@using BlazorMonaco;
+@using BlazorMonaco.Editor;
 
-<h3>Diff Editor</h3>
+<h3>Compare</h3>
 
 <div style="min-width: 90%;min-height: 90vh;">
-    <MonacoDiffEditor @ref="_diffEditor" Id="diff-editor" ConstructionOptions="DiffEditorConstructionOptions" OnDidInit="EditorOnDidInit" />
+    <StandaloneDiffEditor @ref="_diffEditor" Id="diff-editor" ConstructionOptions="DiffEditorConstructionOptions" OnDidInit="EditorOnDidInit" />
 </div>
 
 <style>
@@ -14,23 +16,18 @@
 </style>
 
 @code {
-    private MonacoDiffEditor? _diffEditor { get; set; }
+    private StandaloneDiffEditor? _diffEditor { get; set; }
 
-    private DiffEditorConstructionOptions DiffEditorConstructionOptions(MonacoDiffEditor editor)
+    private StandaloneDiffEditorConstructionOptions DiffEditorConstructionOptions(StandaloneDiffEditor editor)
     {
-        return new DiffEditorConstructionOptions
+        return new StandaloneDiffEditorConstructionOptions
             {
                 OriginalEditable = true,
                 EnableSplitViewResizing = true,
-                //Dimension = new Dimension
-                //{
-                //    Height = 800,
-                //    Width = 1200
-                //}
             };
     }
 
-    private async Task EditorOnDidInit(MonacoEditorBase editor)
+    private async Task EditorOnDidInit()
     {
         if(_diffEditor == null)
         {
@@ -38,17 +35,17 @@
         }
         
         // Get or create the original model
-        TextModel original_model = await MonacoEditorBase.GetModel("editor-originalModel");
+        TextModel original_model = await Global.GetModel("editor-originalModel");
         if (original_model == null)
         {
-            original_model = await MonacoEditorBase.CreateModel("", "json", "editor-originalModel");
+            original_model = await Global.CreateModel("", "json", "editor-originalModel");
         }
 
         // Get or create the modified model
-        TextModel modified_model = await MonacoEditorBase.GetModel("editor-modifiedModel");
+        TextModel modified_model = await Global.GetModel("editor-modifiedModel");
         if (modified_model == null)
         {
-            modified_model = await MonacoEditorBase.CreateModel("", "json", "editor-modifiedModel");
+            modified_model = await Global.CreateModel("", "json", "editor-modifiedModel");
         }
 
         // Set the editor model

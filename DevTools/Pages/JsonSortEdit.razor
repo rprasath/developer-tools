@@ -3,7 +3,7 @@
 @using Newtonsoft.Json;
 @using System.Text;
 
-<h3>Replace Line Breaks</h3>
+<h3>Json Edit/Sort</h3>
 
 <div class="container-fluid">
     <div class="row">
@@ -12,32 +12,19 @@
                 <label for="inputTxt"></label>
                 <textarea @bind="Input1" class="form-control" id="inputTxt" rows="10"> </textarea>
             </div>
-
-        </div>
-        <div class="col">
-            <div class="form-group">
-                <label for="inputTxt"></label>
-                <textarea @bind="Input2" class="form-control" id="inputTxt" rows="10"> </textarea>
-            </div>
-
         </div>
     </div>
     <div class="row" style="margin-top: 20px">
-        <div class="col-2">
-            <label for="longInput">Sorting Field</label>
+        <div class="col-3">
+            <label for="longInput">Sort By</label>
             <input type="text" @bind="SortProp" class="form-control" name="SortProp" id="SortProp" />
         </div>
-        <div class="col-2">
-            <label for="longInput">Exclude Fields</label>
+        <div class="col-7">
+            <label for="longInput">Exclude Fields (Comma seperated)</label>
             <input type="text" @bind="ExcludeProps" class="form-control" name="ExcludeProps" id="ExcludeProps" />
         </div>
-        <div class="col-2">
-            <label for="longInput">Compare Key</label>
-            <input type="text" @bind="CompareKey" class="form-control" name="CompareKey" id="CompareKey" />
-        </div>
-        <div class="col-3" >
-            <button @onclick="CompareJson" class="btn btn-primary" style="margin-top: 20px">Diff</button>
-            <button @onclick="RemoveAndSort" class="btn btn-primary" style="margin-top: 20px">Remove & Sort</button>
+        <div class="col-2" >
+            <button @onclick="RemoveAndSort" class="btn btn-primary" style="margin-top: 20px">Run</button>
         </div>
     </div>
     <div class="row">
@@ -54,54 +41,9 @@
 
 @code {
     public string? Input1 { get; set; }
-    public string? Input2 { get; set; }
     public string? SortProp { get; set; }
     public string? ExcludeProps { get; set; }
-    public string? CompareKey { get; set; }
     public string? Output { get; set; }
-
-    private void CompareJson()
-    {
-        if (string.IsNullOrWhiteSpace(Input1) || string.IsNullOrWhiteSpace(Input2))
-        {
-            return;
-        }
-
-        try
-        {
-            var parsedInput1 = JToken.Parse(Input1);
-            var parsedInput2 = JToken.Parse(Input2);
-
-            if ((parsedInput1 is JArray && parsedInput2 is not JArray) || (parsedInput1 is not JArray && parsedInput2 is JArray))
-            {
-                Output = "Cannot compare Array and Object";
-                return;
-            }
-
-            var sortedInput1 = RemoveAndSortInternal(parsedInput1);
-            var sortedInput2 = RemoveAndSortInternal(parsedInput2);
-
-            StringBuilder builder = new StringBuilder();
-            var j2Count = sortedInput2.Count;
-            for (int i = 0; i < sortedInput1.Count; i++)
-            {
-                var firstObj = sortedInput1[i];
-                var secondObject = CompareKey != null ? sortedInput2.FirstOrDefault(e => e[CompareKey]?.ToString() == firstObj[CompareKey]?.ToString()) : sortedInput2[i];
-
-                var diff = JsonDiffer.JsonDifferentiator.Differentiate(firstObj, secondObject, outputMode: JsonDiffer.OutputMode.Detailed, true);
-                if (diff != null)
-                {
-                    builder.AppendLine(diff.ToString());
-                }
-            }
-
-            Output = builder.ToString();
-        }
-        catch(Exception ex)
-        {
-            Output = ex.ToString();
-        }
-    }
 
     private void RemoveAndSort()
     {

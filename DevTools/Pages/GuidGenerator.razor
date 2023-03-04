@@ -10,14 +10,11 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-3 text-right">
-                            <button @onclick="GenerateGuid" class="btn btn-primary">Generate New Guid</button>
+                        <div class="col-8">
+                            <textarea @bind="NewGuid" class="form-control" disabled rows="1"> </textarea>
                         </div>
-                        <div class="col-7">
-                            <textarea @bind="NewGuid" class="form-control" rows="1" @onclick="@(() => CopyText(NewGuid))"> </textarea>
-                        </div>
-                        <div class="col-2">
-                            <input @bind="AutoCopy" style="margin-top: 10px" type="checkbox" /> Auto Copy
+                        <div class="col-4">
+                            <button @onclick="GenerateGuid" class="btn btn-primary">Generate</button>
                         </div>
                     </div>
                 </div>
@@ -40,13 +37,13 @@
                             <label for="intInput">Int Input</label>
                             <input type="text" @bind="IntInput" class="form-control" name="intInput" id="intInput" />
                         </div>
-                        <div class="col-4 text-center">
+                        <div class="col-4">
                             <button @onclick="GuidFromLongAndInt" class="btn btn-primary mt-4">Generate</button>
                         </div>
                     </div>
                     <div class="row mt-2">
                         <div class="col">
-                            <b> Result: <textarea @bind="LongIntToGuidResult" disabled class="form-control" rows="1" @onclick="@(() => CopyText(LongIntToGuidResult))"> </textarea></b>
+                            Result: <textarea @bind="LongIntToGuidResult" disabled class="form-control" rows="1"> </textarea>
                         </div>
                     </div>
                 </div>
@@ -61,22 +58,19 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-2 mt-1">
-                            Input Guid:
-                        </div>
-                        <div class="col-8">
+                        <div class="col-8 mt-1">
                             <input type="text" @bind="Section3GuidInput" class="form-control" name="longInput" id="sec3LongInput" />
                         </div>
-                        <div class="col-2">
+                        <div class="col-4">
                             <button @onclick="SplitGuidToLongAndInt" class="btn btn-primary">Generate</button>
                         </div>
                     </div>
-                    <div class="row mt-4 mx-5">
+                    <div class="row mt-4">
                         <div class="col-6">
-                            <b>Long Result: <textarea @bind="Section3LongResult" disabled class="form-control" rows="1" @onclick="@(() => CopyText(Section3LongResult))"> </textarea></b>
+                           Long Result: <textarea @bind="Section3LongResult" disabled class="form-control" rows="1"> </textarea>
                         </div>
                         <div class="col-6">
-                            <b>Int Result: <textarea @bind="Section3IntResult" disabled class="form-control" rows="1" @onclick="@(() => CopyText(Section3IntResult))"> </textarea></b>
+                            Int Result: <textarea @bind="Section3IntResult" disabled class="form-control" rows="1"> </textarea>
                         </div>
                     </div>
                 </div>
@@ -87,7 +81,6 @@
 
 @code {
     public string NewGuid { get; set; } = Guid.NewGuid().ToString();
-    public bool AutoCopy { get; set; }
 
     public string? LongInput { get; set; }
     public string? IntInput { get; set; }
@@ -97,17 +90,12 @@
     public string? Section3LongResult { get; set; }
     public string? Section3IntResult { get; set; }
 
-    private async Task GenerateGuid()
+    private void GenerateGuid()
     {
         NewGuid = Guid.NewGuid().ToString();
-
-        if (AutoCopy)
-        {
-            await CopyText(NewGuid);
-        }
     }
 
-    private async Task GuidFromLongAndInt()
+    private void GuidFromLongAndInt()
     {
         long.TryParse(LongInput, out long parsedLong);
         int.TryParse(IntInput, out int parsedInt);
@@ -119,8 +107,6 @@
             BitConverter.GetBytes(parsedInt).CopyTo(bytes, 12);
 
             LongIntToGuidResult = new Guid(bytes).ToString();
-
-            await CopyText(LongIntToGuidResult);
         }
     }
 
@@ -135,15 +121,5 @@
             Section3LongResult = BitConverter.ToInt64(gb, 0).ToString();
             Section3IntResult = BitConverter.ToInt32(gb, 12).ToString();
         }
-    }
-
-    private async Task CopyText(string? text)
-    {
-        if (string.IsNullOrEmpty(text))
-        {
-            return;
-        }
-
-        await JSRuntime.InvokeVoidAsync("clipboardCopy.copyText", text);
     }
 }
