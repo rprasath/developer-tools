@@ -28,16 +28,24 @@
             <div class="form-group">
                 <label for="outputTxt"></label>
                 <textarea @bind="Output" class="form-control" id="outputTxt" rows="10"> </textarea>
+                <p class="footer-text">@(FooterString)</p>
             </div>
         </div>
     </div>
 </div>
 
-
+<style>
+    .footer-text {
+        padding-top: 5px;
+       font-size: 10px;
+       color: gray;
+    }
+</style>
 
 @code {
     public string? Input { get; set; }
     public string? Output { get; set; }
+    public string? FooterString { get; set; }
 
     private void CreateSQLTemp()
     {
@@ -65,6 +73,7 @@
         }
 
         Output = builder.ToString();
+        FooterString = $"Found {rows.Length} items";
     }
 
     private void CreateMultiColumnSQLTemp()
@@ -94,7 +103,7 @@
 
             foreach (var item in rows.Skip(1))
             {
-                //builder.AppendLine();
+                builder.AppendLine();
                 builder.Append("insert into #tempdata values (");
 
                 var rowDatas = item.Split('\t', StringSplitOptions.RemoveEmptyEntries);
@@ -109,6 +118,7 @@
             builder.AppendLine();
 
             Output = builder.ToString();
+            FooterString = $"Found {columHeaders.Length} colums and {rows.Length - 1} rows";
         }
         catch(Exception ex)
         {
@@ -127,6 +137,7 @@
         var rows = commaSeperatedInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
 
         Output = string.Join(",", rows);
+        FooterString = $"Found {rows.Length} items";
     }
 
     private void CommaSeperationWithQuotes()
@@ -140,6 +151,7 @@
         var rows = commaSeperatedInput.Split(',', StringSplitOptions.RemoveEmptyEntries).Distinct().OrderBy(e => e);
 
         Output = $"'{string.Join("','", rows)}'";
+        FooterString = $"Found {rows.Count()} distinct items";
     }
 
     private void DistinctSort()
@@ -149,8 +161,18 @@
             return;
         }
 
-        var rows = Input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries).Distinct().OrderBy(e => e);
+        var origRows = Input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+        var rows = origRows.Distinct().OrderBy(e => e);
 
         Output = string.Join(Environment.NewLine, rows);
+        var removedCount = origRows.Length - rows.Count();
+        if (removedCount > 0) 
+        {
+            FooterString = $"Input has {origRows.Length} rows. Removed {removedCount} duplicates. Result has {rows.Count()} distinct rows";
+        }
+        else
+        {
+            FooterString = "No duplicates found";
+        }
     }
 }
