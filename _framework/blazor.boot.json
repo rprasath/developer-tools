@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "DevTools",
   "resources": {
-    "hash": "sha256-zx07l9kH9Jla2d7AIccBRQzFugxF7qWcODNBiich6AI=",
+    "hash": "sha256-UlKPsiXUnm/6CKxZoSYdLSGjXi4W//xCnSaGvbFX2oc=",
     "jsModuleNative": {
       "dotnet.native.8.0.2.4ycgbwqaki.js": "sha256-1ujnIkyQhOzbiRlzB5UFgZEsfsWTEIZ9jLXiE7j5kzg="
     },
@@ -9,7 +9,7 @@
       "dotnet.runtime.8.0.2.13z0dbizkm.js": "sha256-54KSaoOArNfygQbV+r4B5y3ys53v2tnvFIyZcZiUmi0="
     },
     "wasmNative": {
-      "dotnet.native.wasm": "sha256-9lLQ1fTADyM9d5l5Tv1hPJa9t+Ilj9a3XrMab3EgyK8="
+      "dotnet.native.wasm": "sha256-IpsFkWOCOxf+kSPh7P+rkr4IRNFmsGm4S74QePTJjYc="
     },
     "icu": {
       "icudt_CJK.dat": "sha256-SZLtQnRc0JkwqHab0VUVP7T3uBPSeYzxzDnpxPpUnHk=",
@@ -18,7 +18,7 @@
     },
     "assembly": {
       "BlazorMonaco.wasm": "sha256-sBPTDoXCnXpg2cEy78KvbTiCQaohN4h4qsW5rsxoXGc=",
-      "DevTools.wasm": "sha256-vlxY8Wj84V4hebZCDccw3BS9ajm5KxVNgzYyIBzT3Tc=",
+      "DevTools.wasm": "sha256-mD2i8SuLrxFEHLBtuV7XOs+NAQjn54sowyr5L4n4Tm8=",
       "Microsoft.AspNetCore.Components.wasm": "sha256-aeWqy/V5xvUE88LDhyGicd1VjgJd5Km9x1OzGWDKXXY=",
       "Microsoft.AspNetCore.Components.Web.wasm": "sha256-7KkqwwQtcN+NHevIKYhJ2gLZJa3f0aShCl2ldtegyXw=",
       "Microsoft.AspNetCore.Components.WebAssembly.wasm": "sha256-vOYUxJenhpqw4oK5b61FP/mlyRZu3zgVemvtISW29fs=",
@@ -55,7 +55,7 @@
       "System.Net.Http.wasm": "sha256-9SPKFgB/Uk7NT1ojhMn9OwysLoPfween7t95W+2i78I=",
       "System.Net.Primitives.wasm": "sha256-8EheP3tISwsJHSuaEkoGF04/ZQ1707aNE8P3GdZ4ngE=",
       "System.ObjectModel.wasm": "sha256-EjV44OFXlBnrx4lVnXdaZrDfdwT/Af4gvqKxObSMS50=",
-      "System.Private.CoreLib.wasm": "sha256-I2AuyCs8ByuirgAzRulvQbVdOgrtPk01GHpsa/8Vnm4=",
+      "System.Private.CoreLib.wasm": "sha256-gEG2tS/x9tSDlrNiFaVLZlhAVxHabWApYU4ZDsJsR1k=",
       "System.Private.Uri.wasm": "sha256-Cd0kpQ28nQyzHs3nojY6lgoKUJpeS3w3CI0sMaleTQk=",
       "System.Private.Xml.Linq.wasm": "sha256-TEuWdKWDWft0N4lf5j3I8Dm36Z6OdfmKQdIIxkaxII0=",
       "System.Private.Xml.wasm": "sha256-2R03yh8qwcCeGaENzUFevPgCgTgnuu6bun7Ih8WBbGw=",
