@@ -37,8 +37,8 @@
 <style>
     .footer-text {
         padding-top: 5px;
-       font-size: 10px;
-       color: gray;
+        font-size: 10px;
+        color: gray;
     }
 </style>
 
@@ -72,7 +72,7 @@
             builder.AppendLine("('" + string.Join("'),('", item) + "')");
         }
 
-        Output = builder.ToString();
+        Output = builder.Replace("'NULL'", "NULL").ToString();
         FooterString = $"Found {rows.Length} items";
     }
 
@@ -112,7 +112,7 @@
                 {
                     rowBuilder.Append($"'{col}',");
                 }
-                builder.Append(rowBuilder.ToString().Trim(','));
+                builder.Append(rowBuilder.Replace("'NULL'", "NULL").ToString().Trim(','));
                 builder.AppendLine(")");
             }
             builder.AppendLine();
@@ -120,7 +120,7 @@
             Output = builder.ToString();
             FooterString = $"Found {columHeaders.Length} colums and {rows.Length - 1} rows";
         }
-        catch(Exception ex)
+        catch (Exception ex)
         {
             Output = ex.ToString();
         }
@@ -166,7 +166,7 @@
 
         Output = string.Join(Environment.NewLine, rows);
         var removedCount = origRows.Length - rows.Count();
-        if (removedCount > 0) 
+        if (removedCount > 0)
         {
             FooterString = $"Input has {origRows.Length} rows. Removed {removedCount} duplicates. Result has {rows.Count()} distinct rows";
         }
