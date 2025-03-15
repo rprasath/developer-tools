@@ -2,11 +2,39 @@
 
 <div class="min-h-screen flex flex-col">
     <header class="bg-gradient-to-r from-blue-800 to-purple-800 text-white shadow-md">
-        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
-            <a href="/" class="text-xl font-bold">Developer Tools</a>
-            <nav>
-                <a href="/" class="px-3 py-2 hover:bg-blue-700 rounded transition-colors">Home</a>
-            </nav>
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <NavLink href="/" class="text-xl font-bold">Developer Tools</NavLink>
+                
+                <!-- Desktop Navigation -->
+                <nav class="hidden md:flex items-center space-x-1">
+                    <NavLink href="/replacelinebreaks" ActiveClass="bg-blue-700" class="px-3 py-1 text-white hover:bg-blue-700 rounded transition-colors text-sm">Line Breaks</NavLink>
+                    <NavLink href="/guidhelpers" ActiveClass="bg-blue-700" class="px-3 py-1 text-white hover:bg-blue-700 rounded transition-colors text-sm">GUID</NavLink>
+                    <NavLink href="/stringformatter" ActiveClass="bg-blue-700" class="px-3 py-1 text-white hover:bg-blue-700 rounded transition-colors text-sm">String Format</NavLink>
+                    <NavLink href="/jsoneditsort" ActiveClass="bg-blue-700" class="px-3 py-1 text-white hover:bg-blue-700 rounded transition-colors text-sm">JSON Edit</NavLink>
+                    <NavLink href="/compare" ActiveClass="bg-blue-700" class="px-3 py-1 text-white hover:bg-blue-700 rounded transition-colors text-sm">Compare</NavLink>
+                </nav>
+                
+                <!-- Mobile Menu Button -->
+                <div class="md:hidden">
+                    <button id="mobile-menu-button" class="text-white focus:outline-none">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Mobile Menu -->
+            <div id="mobile-menu" class="hidden mt-2 pb-3 md:hidden">
+                <div class="flex flex-col space-y-2">
+                    <NavLink href="/replacelinebreaks" ActiveClass="bg-blue-700" class="px-3 py-2 text-white hover:bg-blue-700 rounded transition-colors">Line Breaks</NavLink>
+                    <NavLink href="/guidhelpers" ActiveClass="bg-blue-700" class="px-3 py-2 text-white hover:bg-blue-700 rounded transition-colors">GUID Helpers</NavLink>
+                    <NavLink href="/stringformatter" ActiveClass="bg-blue-700" class="px-3 py-2 text-white hover:bg-blue-700 rounded transition-colors">String Formatter</NavLink>
+                    <NavLink href="/jsoneditsort" ActiveClass="bg-blue-700" class="px-3 py-2 text-white hover:bg-blue-700 rounded transition-colors">JSON Edit/Sort</NavLink>
+                    <NavLink href="/compare" ActiveClass="bg-blue-700" class="px-3 py-2 text-white hover:bg-blue-700 rounded transition-colors">Compare</NavLink>
+                </div>
+            </div>
         </div>
     </header>
 
