@@ -1,46 +1,44 @@
 ﻿@page "/replacelinebreaks"
 
-<h3>Replace Line Breaks</h3>
+<div class="max-w-screen-xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Replace Line Breaks</h1>
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col">
-            <div class="form-group">
-                <label for="inputTxt"></label>
-                <textarea @bind="Input" class="form-control" id="inputTxt" rows="10"> </textarea>
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-6">
+            <!-- Input Area -->
+            <div class="mb-6">
+                <label for="inputTxt" class="text-sm font-medium text-gray-700 mb-2 block">Input</label>
+                <textarea @bind="Input" class="w-full h-48 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" id="inputTxt"></textarea>
             </div>
 
-        </div>
-    </div>
-    <div class="row">
-        <div class="col">
-            <div style="margin-top: 20px">
-                <button @onclick="CreateSQLTemp" class="btn btn-primary">SQL Query</button>
-                <button @onclick="CreateMultiColumnSQLTemp" class="btn btn-primary">Multi Column SQL Query</button>
-                <button @onclick="CommaSeperation" class="btn btn-primary">Comma Seperate</button>
-                <button @onclick="CommaSeperationWithQuotes" class="btn btn-primary">Comma Seperate (Distinct, Quote)</button>
-                <button @onclick="DistinctSort" class="btn btn-primary">Sort (Distinct)</button>
+            <!-- Action Buttons -->
+            <div class="flex flex-wrap gap-2 mb-6">
+                <button @onclick="CreateSQLTemp" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                    SQL Query
+                </button>
+                <button @onclick="CreateMultiColumnSQLTemp" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                    Multi Column SQL Query
+                </button>
+                <button @onclick="CommaSeperation" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
+                    Comma Separate
+                </button>
+                <button @onclick="CommaSeperationWithQuotes" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                    Comma Separate (Distinct, Quote)
+                </button>
+                <button @onclick="DistinctSort" class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors">
+                    Sort (Distinct)
+                </button>
             </div>
-        </div>
-    </div>
-    <div class="row">
-        <div class="col">
-            <div class="form-group">
-                <label for="outputTxt"></label>
-                <textarea @bind="Output" class="form-control" id="outputTxt" rows="10"> </textarea>
-                <p class="footer-text">@(FooterString)</p>
+
+            <!-- Output Area -->
+            <div>
+                <label for="outputTxt" class="text-sm font-medium text-gray-700 mb-2 block">Output</label>
+                <textarea @bind="Output" class="w-full h-48 p-3 border border-gray-300 rounded-md bg-gray-50" id="outputTxt" readonly></textarea>
+                <p class="text-xs text-gray-500 mt-2">@(FooterString)</p>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .footer-text {
-        padding-top: 5px;
-        font-size: 10px;
-        color: gray;
-    }
-</style>
 
 @code {
     public string? Input { get; set; }
