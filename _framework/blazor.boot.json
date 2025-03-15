@@ -1,10 +1,10 @@
 {
   "mainAssemblyName": "DevTools",
   "resources": {
-    "hash": "sha256-CadV62dy/VI0wTsmqcP3H+1CY3Hmve0y9YFYjslpxrg=",
+    "hash": "sha256-iRZgEQ1PBSMQk9cfhsGTvFVBFIIEKq3+ZpMyaLOx24E=",
     "fingerprinting": {
       "BlazorMonaco.ef1a4jimsf.wasm": "BlazorMonaco.wasm",
-      "DevTools.s03y07ijba.wasm": "DevTools.wasm",
+      "DevTools.8kcfvltrdk.wasm": "DevTools.wasm",
       "Microsoft.AspNetCore.Components.0wvseqn6v5.wasm": "Microsoft.AspNetCore.Components.wasm",
       "Microsoft.AspNetCore.Components.Web.7apenvi18o.wasm": "Microsoft.AspNetCore.Components.Web.wasm",
       "Microsoft.AspNetCore.Components.WebAssembly.mhi741p0i5.wasm": "Microsoft.AspNetCore.Components.WebAssembly.wasm",
@@ -94,7 +94,7 @@
     },
     "assembly": {
       "BlazorMonaco.ef1a4jimsf.wasm": "sha256-Ror3QOMwP8ju3jnvYpqX7VBSOF9xXoK9QrBwKN+EEW8=",
-      "DevTools.s03y07ijba.wasm": "sha256-NGCs2rvHn9mtdu7xxOuJu0P2QGybsVnlufbpmV4gvMI=",
+      "DevTools.8kcfvltrdk.wasm": "sha256-WHBHIz6MSUhFiKpvzKvCkEqj1Ise4M7s7Nx30zNuInc=",
       "Microsoft.AspNetCore.Components.0wvseqn6v5.wasm": "sha256-kAlth8Twia/+u+Wi0jOKdeX39XtPnHPi0yrl4SrECsI=",
       "Microsoft.AspNetCore.Components.Web.7apenvi18o.wasm": "sha256-fyqnB2DYAO80AStwVkG2g+mFplGXI54QNWpUbk5VoiE=",
       "Microsoft.AspNetCore.Components.WebAssembly.mhi741p0i5.wasm": "sha256-pu76rHZnWXnD8OJbsfHeWNtvNYwvUMrsao8y79n+GXY=",

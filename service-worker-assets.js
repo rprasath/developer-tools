@@ -1001,8 +1001,8 @@
       "url": "_framework\/BlazorMonaco.ef1a4jimsf.wasm.br"
     },
     {
-      "hash": "sha256-voSFntxvku8ksAFVoxiJ4BJ1qNgIH+5Y6yfnlS+3COI=",
-      "url": "_framework\/DevTools.s03y07ijba.wasm.br"
+      "hash": "sha256-03rp+CoumUFsAZps0IPyXyUd1pzJVHzI3rqV+Y6Db1w=",
+      "url": "_framework\/DevTools.8kcfvltrdk.wasm.br"
     },
     {
       "hash": "sha256-wyhVpaQyEUNKnHDr\/VwXdZ8sqzqmMCqsfplxJNaTdAg=",
@@ -1249,7 +1249,7 @@
       "url": "_framework\/System.icunsnzrqy.wasm.br"
     },
     {
-      "hash": "sha256-OyKGhTe8JWz4RXzSWowK\/bSL3Gj\/mdwfa1AjlOecPZw=",
+      "hash": "sha256-l+LMfblGzPUUrJ\/74YAA1FxiOp4aihw7To+Cf6An7oY=",
       "url": "_framework\/blazor.boot.json.br"
     },
     {
@@ -1321,5 +1321,5 @@
       "url": "brotliloader.min.js"
     }
   ],
-  "version": "A1acXNgS"
+  "version": "lv7gfbGC"
 };
