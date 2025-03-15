@@ -6,7 +6,31 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>DevTools</title>
     <base href="https://www.prasathramasamy.com/developer-tools/" />
-    <link href="css/bootstrap/bootstrap.min.css" rel="stylesheet" />
+    <!-- Replace Bootstrap with Tailwind CSS -->
+    <script src="tailwindcss.3.4.16.js"></script>
+    <!-- Custom Tailwind configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        },
+                    }
+                }
+            }
+        }
+    </script>
     <link href="css/app.css" rel="stylesheet" />
     <link rel="icon" type="image/png" href="favicon.png" />
     <link href="DevTools.styles.css" rel="stylesheet" />
@@ -16,8 +40,8 @@
     <link href="_content/BlazorMonaco/lib/monaco-editor/min/vs/editor/editor.main.css" rel="stylesheet" />
 </head>
 
-<body>
-    <div id="app">
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen">
         <svg class="loading-progress">
             <circle r="40%" cx="50%" cy="50%" />
             <circle r="40%" cx="50%" cy="50%" />
@@ -25,10 +49,10 @@
         <div class="loading-progress-text"></div>
     </div>
 
-    <div id="blazor-error-ui">
+    <div id="blazor-error-ui" class="hidden fixed bottom-0 w-full bg-yellow-100 p-4 shadow-md z-50">
         An unhandled error has occurred.
-        <a href="" class="reload">Reload</a>
-        <a class="dismiss">🗙</a>
+        <a href="" class="reload ml-2 text-blue-600 hover:underline">Reload</a>
+        <a class="dismiss absolute right-3 top-2 cursor-pointer">🗙</a>
     </div>
     <script src="_content/BlazorMonaco/lib/monaco-editor/min/vs/loader.js"></script>
     <script>require.config({ paths: { 'vs': '_content/BlazorMonaco/lib/monaco-editor/min/vs' } });</script>
@@ -40,4 +64,3 @@
 </body>
 
 </html>
-
