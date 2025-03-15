@@ -1,78 +1,80 @@
 ﻿@page "/guidhelpers"
 @inject IJSRuntime JSRuntime
 
-<div class="container-fluid">
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <b>Guid Generator</b>
+<div class="max-w-screen-xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">GUID Generator</h1>
+
+    <!-- Generate GUID Card -->
+    <div class="bg-white rounded-lg shadow-md mb-8">
+        <div class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-gray-800">Generate GUID</h2>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-col md:flex-row gap-4">
+                <div class="flex-grow">
+                    <textarea @bind="NewGuid" class="w-full p-2 border border-gray-300 rounded-md bg-gray-50" disabled rows="1"></textarea>
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-8">
-                            <textarea @bind="NewGuid" class="form-control" disabled rows="1"> </textarea>
-                        </div>
-                        <div class="col-4">
-                            <button @onclick="GenerateGuid" class="btn btn-primary">Generate</button>
-                        </div>
-                    </div>
+                <div>
+                    <button @onclick="GenerateGuid" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        Generate
+                    </button>
                 </div>
             </div>
         </div>
     </div>
-    <div class="row mt-5">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <b> Guid from long and int</b>
+
+    <!-- GUID from long and int Card -->
+    <div class="bg-white rounded-lg shadow-md mb-8">
+        <div class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-gray-800">GUID from long and int</h2>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-col md:flex-row gap-6 mb-4">
+                <div class="flex-1">
+                    <label for="longInput" class="block text-sm font-medium text-gray-700 mb-1">Long Input</label>
+                    <input type="text" @bind="LongInput" class="w-full p-2 border border-gray-300 rounded-md" name="longInput" id="longInput" />
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-4">
-                            <label for="longInput">Long Input</label>
-                            <input type="text" @bind="LongInput" class="form-control" name="longInput" id="longInput" />
-                        </div>
-                        <div class="col-4">
-                            <label for="intInput">Int Input</label>
-                            <input type="text" @bind="IntInput" class="form-control" name="intInput" id="intInput" />
-                        </div>
-                        <div class="col-4">
-                            <button @onclick="GuidFromLongAndInt" class="btn btn-primary mt-4">Generate</button>
-                        </div>
-                    </div>
-                    <div class="row mt-2">
-                        <div class="col">
-                            Result: <textarea @bind="LongIntToGuidResult" disabled class="form-control" rows="1"> </textarea>
-                        </div>
-                    </div>
+                <div class="flex-1">
+                    <label for="intInput" class="block text-sm font-medium text-gray-700 mb-1">Int Input</label>
+                    <input type="text" @bind="IntInput" class="w-full p-2 border border-gray-300 rounded-md" name="intInput" id="intInput" />
                 </div>
+                <div class="flex items-end">
+                    <button @onclick="GuidFromLongAndInt" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        Generate
+                    </button>
+                </div>
+            </div>
+            <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Result:</label>
+                <textarea @bind="LongIntToGuidResult" disabled class="w-full p-2 border border-gray-300 rounded-md bg-gray-50" rows="1"></textarea>
             </div>
         </div>
     </div>
-    <div class="row mt-5">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header">
-                    <b> Split Guid to long and int</b>
+
+    <!-- Split GUID to long and int Card -->
+    <div class="bg-white rounded-lg shadow-md">
+        <div class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-gray-800">Split GUID to long and int</h2>
+        </div>
+        <div class="p-6">
+            <div class="flex flex-col md:flex-row gap-4 mb-6">
+                <div class="flex-grow">
+                    <input type="text" @bind="Section3GuidInput" class="w-full p-2 border border-gray-300 rounded-md" name="sec3LongInput" id="sec3LongInput" placeholder="Enter GUID" />
                 </div>
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-8 mt-1">
-                            <input type="text" @bind="Section3GuidInput" class="form-control" name="longInput" id="sec3LongInput" />
-                        </div>
-                        <div class="col-4">
-                            <button @onclick="SplitGuidToLongAndInt" class="btn btn-primary">Generate</button>
-                        </div>
-                    </div>
-                    <div class="row mt-4">
-                        <div class="col-6">
-                           Long Result: <textarea @bind="Section3LongResult" disabled class="form-control" rows="1"> </textarea>
-                        </div>
-                        <div class="col-6">
-                            Int Result: <textarea @bind="Section3IntResult" disabled class="form-control" rows="1"> </textarea>
-                        </div>
-                    </div>
+                <div>
+                    <button @onclick="SplitGuidToLongAndInt" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        Generate
+                    </button>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Long Result:</label>
+                    <textarea @bind="Section3LongResult" disabled class="w-full p-2 border border-gray-300 rounded-md bg-gray-50" rows="1"></textarea>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Int Result:</label>
+                    <textarea @bind="Section3IntResult" disabled class="w-full p-2 border border-gray-300 rounded-md bg-gray-50" rows="1"></textarea>
                 </div>
             </div>
         </div>

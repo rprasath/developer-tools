@@ -2,18 +2,19 @@
 @using BlazorMonaco;
 @using BlazorMonaco.Editor;
 
-<h3>Compare</h3>
+<div class="max-w-screen-xl mx-auto">
+    <h1 class="text-2xl font-bold text-gray-800 mb-6">Compare</h1>
 
-<div style="min-width: 90%;min-height: 90vh;">
-    <StandaloneDiffEditor @ref="_diffEditor" Id="diff-editor" ConstructionOptions="DiffEditorConstructionOptions" OnDidInit="EditorOnDidInit" />
+    <div class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-4">
+            <p class="text-gray-600 mb-4">Use this tool to compare two pieces of text or code side by side. The left editor is editable.</p>
+            
+            <div class="monaco-editor-container border border-gray-300 rounded-lg overflow-hidden" style="height: 70vh;">
+                <StandaloneDiffEditor @ref="_diffEditor" Id="diff-editor" ConstructionOptions="DiffEditorConstructionOptions" OnDidInit="EditorOnDidInit" />
+            </div>
+        </div>
+    </div>
 </div>
-
-<style>
-    .monaco-editor-container {
-        height: 90vh;
-        border: 1px solid gray;
-    }
-</style>
 
 @code {
     private StandaloneDiffEditor? _diffEditor { get; set; }
@@ -24,6 +25,9 @@
             {
                 OriginalEditable = true,
                 EnableSplitViewResizing = true,
+                Theme = "vs",
+                AutomaticLayout = true,
+                ScrollBeyondLastLine = false
             };
     }
 

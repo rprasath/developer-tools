@@ -1,14 +1,22 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
-        <NavMenu />
-    </div>
+<div class="min-h-screen flex flex-col">
+    <header class="bg-gradient-to-r from-blue-800 to-purple-800 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <a href="/" class="text-xl font-bold">Developer Tools</a>
+            <nav>
+                <a href="/" class="px-3 py-2 hover:bg-blue-700 rounded transition-colors">Home</a>
+            </nav>
+        </div>
+    </header>
 
-    <main>
-        <article class="content px-4 pb-4">
-            @Body
-        </article>
+    <main class="flex-grow container mx-auto px-4 py-6 pb-12">
+        @Body
     </main>
-</div>
 
+    <footer class="bg-gray-100 border-t border-gray-200 py-4">
+        <div class="container mx-auto px-4 text-center text-gray-500 text-sm">
+            Developer Tools - Runs offline and can be installed as an App.
+        </div>
+    </footer>
+</div>
