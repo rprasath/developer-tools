@@ -1,0 +1,298 @@
+@page "/regextester"
+@using System.Text
+@using System.Text.RegularExpressions
+@using System.Net
+@using System.Linq
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Regex Tester</h1>
+        <p class="text-gray-600 mt-2">
+            Quickly experiment with .NET regular expressions. Toggle common options, highlight matches, view captured
+            groups, and test replacements without leaving your browser.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white rounded-lg shadow-md p-6 space-y-5">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="pattern-input">Pattern</label>
+                <input id="pattern-input" type="text" @bind="pattern" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="^\\w+@\\w+\\.com$" />
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="test-input">Test text</label>
+                <textarea id="test-input" @bind="testText" class="w-full h-48 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"></textarea>
+            </div>
+
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="replacement-input">Replacement (optional)</label>
+                <input id="replacement-input" type="text" @bind="replacement" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm" placeholder="$1" />
+            </div>
+
+            <div class="flex flex-wrap gap-4 text-sm text-gray-700">
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" @bind="ignoreCase" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    Ignore case
+                </label>
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" @bind="multiline" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    Multiline
+                </label>
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" @bind="singleline" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    Singleline (dotall)
+                </label>
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox" @bind="explicitCapture" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                    Explicit capture
+                </label>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors" @onclick="RunRegex">
+                    Test pattern
+                </button>
+                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors" @onclick="Clear">
+                    Clear
+                </button>
+            </div>
+
+            <div class="flex flex-wrap gap-2 text-xs text-gray-500">
+                <span class="uppercase tracking-wide font-semibold">Examples:</span>
+                <button class="underline hover:text-blue-600" @onclick='() => LoadExample("Email", "^\\w+[\\w\\.-]*@\\w+[\\w\\.-]*\\.\\w+$", "john.doe@example.com\ninvalid-email")'>Email</button>
+                <button class="underline hover:text-blue-600" @onclick='() => LoadExample("GUID", "^[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}$", "Valid: 3F2504E0-4F89-11D3-9A0C-0305E82C3301\nOops: 1234")'>GUID</button>
+                <button class="underline hover:text-blue-600" @onclick='() => LoadExample("Numbers", "-?\\d+\\.?\\d*", "42\n-5\n3.14\nnot a number")'>Numbers</button>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 space-y-4">
+            <h2 class="text-xl font-semibold text-gray-800">Quick tips</h2>
+            <ul class="list-disc list-inside text-sm text-gray-600 space-y-2">
+                <li>Toggle <strong>multiline</strong> to have <code>^</code>/<code>$</code> match at each line boundary.</li>
+                <li><strong>Singleline</strong> (dotall) lets <code>.</code> match newline characters.</li>
+                <li><strong>Explicit capture</strong> ignores unnamed groups unless you use <code>(?&lt;name&gt;...)</code>.</li>
+                <li>Use numbered groups (<code>$1</code>) or named groups (<code>${group}</code>) in the replacement box.</li>
+            </ul>
+        </div>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(regexError))
+    {
+        <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+            @regexError
+        </div>
+    }
+    else if (matches.Count > 0 || !string.IsNullOrEmpty(testText))
+    {
+        <div class="bg-white rounded-lg shadow-md p-6 space-y-5">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <div>
+                    <h2 class="text-xl font-semibold text-gray-800">Results</h2>
+                    <p class="text-sm text-gray-600">@matches.Count match@(matches.Count == 1 ? string.Empty : "es") found.</p>
+                </div>
+                <button class="px-3 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors" @onclick="RunRegex">
+                    Re-run
+                </button>
+            </div>
+
+            <div class="bg-gray-900 rounded-md text-green-100 text-sm p-4 font-mono overflow-x-auto">
+                <div class="whitespace-pre-wrap" style="word-break: break-word;">
+                    @((MarkupString)(highlightedText ?? WebUtility.HtmlEncode(testText ?? string.Empty)))
+                </div>
+            </div>
+
+            @if (matches.Count > 0)
+            {
+                <div class="overflow-x-auto">
+                    <table class="min-w-full text-sm text-left">
+                        <thead>
+                            <tr class="text-xs uppercase tracking-wide text-gray-500">
+                                <th class="py-2 pr-4">#</th>
+                                <th class="py-2 pr-4">Index</th>
+                                <th class="py-2 pr-4">Length</th>
+                                <th class="py-2 pr-4">Match</th>
+                                <th class="py-2">Groups</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < matches.Count; i++)
+                            {
+                                var match = matches[i];
+                                <tr class="border-b border-gray-100 last:border-none align-top">
+                                    <td class="py-2 pr-4 font-semibold text-gray-700">@(i + 1)</td>
+                                    <td class="py-2 pr-4 text-gray-600">@match.Index</td>
+                                    <td class="py-2 pr-4 text-gray-600">@match.Length</td>
+                                    <td class="py-2 pr-4 text-gray-800">@match.Value</td>
+                                    <td class="py-2 text-gray-600">
+                                        @if (match.Groups.Count == 0)
+                                        {
+                                            <span class="text-xs text-gray-400">(none)</span>
+                                        }
+                                        else
+                                        {
+                                            <ul class="space-y-1">
+                                                @foreach (var group in match.Groups)
+                                                {
+                                                    <li class="text-xs">
+                                                        <span class="font-semibold text-gray-700">@group.Name</span>
+                                                        <span>→</span>
+                                                        <span class="font-mono">@group.Value</span>
+                                                        <span class="text-gray-400">(index @group.Index, length @group.Length)</span>
+                                                    </li>
+                                                }
+                                            </ul>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(replacement) && replacementResult is not null)
+            {
+                <div class="bg-blue-50 border border-blue-200 rounded-md p-4 text-sm text-blue-900">
+                    <p class="font-semibold mb-2">Replacement preview</p>
+                    <div class="whitespace-pre-wrap font-mono text-xs">@replacementResult</div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    private string pattern = string.Empty;
+    private string testText = string.Empty;
+    private string? replacement;
+    private bool ignoreCase = true;
+    private bool multiline;
+    private bool singleline;
+    private bool explicitCapture;
+    private string? regexError;
+    private List<RegexMatchResult> matches = new();
+    private string? highlightedText;
+    private string? replacementResult;
+
+    private void RunRegex()
+    {
+        regexError = null;
+        highlightedText = null;
+        replacementResult = null;
+        matches = new List<RegexMatchResult>();
+
+        if (string.IsNullOrWhiteSpace(pattern))
+        {
+            regexError = "Enter a pattern to start testing.";
+            return;
+        }
+
+        try
+        {
+            var options = RegexOptions.None;
+            if (ignoreCase)
+            {
+                options |= RegexOptions.IgnoreCase;
+            }
+            if (multiline)
+            {
+                options |= RegexOptions.Multiline;
+            }
+            if (singleline)
+            {
+                options |= RegexOptions.Singleline;
+            }
+            if (explicitCapture)
+            {
+                options |= RegexOptions.ExplicitCapture;
+            }
+
+            var regex = new Regex(pattern, options);
+            var input = testText ?? string.Empty;
+            var matchesCollection = regex.Matches(input);
+            var groupNames = regex.GetGroupNames().Where(name => name != "0").ToArray();
+
+            foreach (Match match in matchesCollection)
+            {
+                var groups = new List<GroupResult>();
+                foreach (var name in groupNames)
+                {
+                    var group = match.Groups[name];
+                    if (group.Success)
+                    {
+                        groups.Add(new GroupResult(name, group.Index, group.Length, group.Value));
+                    }
+                }
+
+                matches.Add(new RegexMatchResult(match.Index, match.Length, match.Value, groups));
+            }
+
+            highlightedText = BuildHighlightedText(input, matches);
+
+            if (!string.IsNullOrEmpty(replacement))
+            {
+                replacementResult = regex.Replace(input, replacement);
+            }
+        }
+        catch (Exception ex)
+        {
+            regexError = ex.Message;
+            matches.Clear();
+        }
+    }
+
+    private void Clear()
+    {
+        pattern = string.Empty;
+        testText = string.Empty;
+        replacement = string.Empty;
+        matches.Clear();
+        highlightedText = null;
+        replacementResult = null;
+        regexError = null;
+    }
+
+    private void LoadExample(string name, string examplePattern, string exampleText)
+    {
+        pattern = examplePattern;
+        testText = exampleText;
+        replacement = name == "Email" ? "$0" : string.Empty;
+        RunRegex();
+    }
+
+    private static string BuildHighlightedText(string input, IReadOnlyCollection<RegexMatchResult> results)
+    {
+        if (string.IsNullOrEmpty(input) || results.Count == 0)
+        {
+            return WebUtility.HtmlEncode(input);
+        }
+
+        var ordered = results.OrderBy(m => m.Index).ToList();
+        var builder = new StringBuilder();
+        var current = 0;
+        foreach (var match in ordered)
+        {
+            if (match.Index > current)
+            {
+                builder.Append(WebUtility.HtmlEncode(input[current..match.Index]));
+            }
+
+            builder.Append("<mark class=\"bg-yellow-200 text-gray-900 rounded px-0.5\">");
+            builder.Append(WebUtility.HtmlEncode(input.Substring(match.Index, match.Length)));
+            builder.Append("</mark>");
+            current = match.Index + match.Length;
+        }
+
+        if (current < input.Length)
+        {
+            builder.Append(WebUtility.HtmlEncode(input[current..]));
+        }
+
+        return builder.ToString();
+    }
+
+    private record RegexMatchResult(int Index, int Length, string Value, List<GroupResult> Groups);
+
+    private record GroupResult(string Name, int Index, int Length, string Value);
+}

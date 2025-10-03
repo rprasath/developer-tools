@@ -1,0 +1,376 @@
+@page "/unixtimestamp"
+@inject IJSRuntime JSRuntime
+@using System.Globalization
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Unix Timestamp Converter</h1>
+        <p class="text-gray-600 mt-2">
+            Convert between Unix timestamps and human-readable dates while staying offline. Quickly switch between
+            seconds and milliseconds, preview UTC versus local time, and copy results with a single click.
+        </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="bg-white rounded-lg shadow-md p-6 space-y-5">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-gray-800">Timestamp to date</h2>
+                <button class="text-sm text-blue-600 hover:text-blue-700 font-medium" @onclick="UseCurrentTimestamp">
+                    Use current time
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="timestamp-input">Timestamp</label>
+                    <input id="timestamp-input" type="text" @bind="timestampInput" @bind:event="oninput"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="e.g. 1717435200" />
+                </div>
+
+                <div class="flex flex-wrap gap-4 items-center">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Units</label>
+                        <select @bind="timestampUnit" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Seconds">Seconds</option>
+                            <option value="Milliseconds">Milliseconds</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Display time</label>
+                        <select @bind="timestampOutputZone" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="Utc">UTC</option>
+                            <option value="Local">Local</option>
+                            <option value="Both">Show both</option>
+                        </select>
+                    </div>
+                    <button class="ml-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+                            @onclick="ConvertTimestamp">
+                        Convert
+                    </button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(timestampError))
+            {
+                <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+                    @timestampError
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(timestampUtc) || !string.IsNullOrWhiteSpace(timestampLocal))
+            {
+                <div class="space-y-3">
+                    @if (!string.IsNullOrWhiteSpace(timestampUtc))
+                    {
+                        <div class="flex items-start justify-between bg-gray-50 border border-gray-200 rounded-md p-3">
+                            <div>
+                                <span class="block text-xs uppercase text-gray-500 font-semibold">UTC</span>
+                                <span class="block text-gray-800 font-medium">@timestampUtc</span>
+                                <span class="block text-xs text-gray-500">@timestampUtcIso</span>
+                            </div>
+                            <button id="copy-utc" class="text-gray-500 hover:text-gray-700" @onclick="() => CopyAsync(timestampUtc, "copy-utc")" title="Copy UTC time">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(timestampLocal))
+                    {
+                        <div class="flex items-start justify-between bg-gray-50 border border-gray-200 rounded-md p-3">
+                            <div>
+                                <span class="block text-xs uppercase text-gray-500 font-semibold">Local</span>
+                                <span class="block text-gray-800 font-medium">@timestampLocal</span>
+                                <span class="block text-xs text-gray-500">@timestampLocalIso</span>
+                            </div>
+                            <button id="copy-local" class="text-gray-500 hover:text-gray-700" @onclick="() => CopyAsync(timestampLocal, "copy-local")" title="Copy local time">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(timestampRelative))
+                    {
+                        <p class="text-xs text-gray-500">@timestampRelative</p>
+                    }
+                </div>
+            }
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 space-y-5">
+            <div class="flex items-center justify-between">
+                <h2 class="text-xl font-semibold text-gray-800">Date to timestamp</h2>
+                <button class="text-sm text-blue-600 hover:text-blue-700 font-medium" @onclick="UseNowForDate">
+                    Use now
+                </button>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="datetime-input">Date &amp; time</label>
+                    <input id="datetime-input" type="datetime-local" @bind="dateInput" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Interpret as</label>
+                    <select @bind="dateInterpretation" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="Local">Local time</option>
+                        <option value="Utc">UTC</option>
+                    </select>
+                </div>
+                <div class="flex flex-wrap gap-3">
+                    <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors" @onclick="ConvertDate">
+                        Convert
+                    </button>
+                    @if (!string.IsNullOrWhiteSpace(unixSeconds))
+                    {
+                        <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors" @onclick="FillTimestampFromDate">
+                            Copy to other panel
+                        </button>
+                    }
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(dateError))
+            {
+                <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+                    @dateError
+                </div>
+            }
+            else if (!string.IsNullOrWhiteSpace(unixSeconds))
+            {
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md p-3">
+                        <div>
+                            <span class="block text-xs uppercase text-gray-500 font-semibold">Unix seconds</span>
+                            <span class="block text-gray-800 font-medium">@unixSeconds</span>
+                        </div>
+                        <button id="copy-seconds" class="text-gray-500 hover:text-gray-700" @onclick="() => CopyAsync(unixSeconds, "copy-seconds")" title="Copy seconds">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md p-3">
+                        <div>
+                            <span class="block text-xs uppercase text-gray-500 font-semibold">Unix milliseconds</span>
+                            <span class="block text-gray-800 font-medium">@unixMilliseconds</span>
+                        </div>
+                        <button id="copy-milliseconds" class="text-gray-500 hover:text-gray-700" @onclick="() => CopyAsync(unixMilliseconds, "copy-milliseconds")" title="Copy milliseconds">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-500">
+                        <div>
+                            <span class="block font-semibold uppercase text-gray-500">UTC</span>
+                            <span class="block">@dateUtcSummary</span>
+                        </div>
+                        <div>
+                            <span class="block font-semibold uppercase text-gray-500">Local</span>
+                            <span class="block">@dateLocalSummary</span>
+                        </div>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private enum TimestampUnit
+    {
+        Seconds,
+        Milliseconds
+    }
+
+    private enum TimeZoneSelection
+    {
+        Utc,
+        Local,
+        Both
+    }
+
+    private string? timestampInput = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+    private TimestampUnit timestampUnit = TimestampUnit.Seconds;
+    private TimeZoneSelection timestampOutputZone = TimeZoneSelection.Both;
+    private string? timestampUtc;
+    private string? timestampUtcIso;
+    private string? timestampLocal;
+    private string? timestampLocalIso;
+    private string? timestampRelative;
+    private string? timestampError;
+
+    private DateTime dateInput = DateTime.Now;
+    private TimeZoneSelection dateInterpretation = TimeZoneSelection.Local;
+    private string? unixSeconds;
+    private string? unixMilliseconds;
+    private string? dateUtcSummary;
+    private string? dateLocalSummary;
+    private string? dateError;
+
+    protected override void OnInitialized()
+    {
+        ConvertTimestamp();
+        ConvertDate();
+    }
+
+    private void ConvertTimestamp()
+    {
+        timestampError = null;
+        timestampUtc = null;
+        timestampUtcIso = null;
+        timestampLocal = null;
+        timestampLocalIso = null;
+        timestampRelative = null;
+
+        if (!long.TryParse(timestampInput, out var value))
+        {
+            timestampError = "Enter a valid numeric timestamp.";
+            return;
+        }
+
+        try
+        {
+            var instant = timestampUnit == TimestampUnit.Seconds
+                ? DateTimeOffset.FromUnixTimeSeconds(value)
+                : DateTimeOffset.FromUnixTimeMilliseconds(value);
+
+            var utc = instant.ToUniversalTime();
+            var local = instant.ToLocalTime();
+
+            if (timestampOutputZone is TimeZoneSelection.Utc or TimeZoneSelection.Both)
+            {
+                timestampUtc = utc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+                timestampUtcIso = utc.ToString("O", CultureInfo.InvariantCulture);
+            }
+
+            if (timestampOutputZone is TimeZoneSelection.Local or TimeZoneSelection.Both)
+            {
+                var localFormat = "yyyy-MM-dd HH:mm:ss 'GMT'zzz";
+                timestampLocal = local.ToString(localFormat, CultureInfo.InvariantCulture);
+                timestampLocalIso = local.ToString("O", CultureInfo.InvariantCulture);
+            }
+
+            timestampRelative = BuildRelativeDescription(utc);
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            timestampError = ex.Message;
+        }
+    }
+
+    private void ConvertDate()
+    {
+        dateError = null;
+
+        try
+        {
+            var kind = dateInterpretation switch
+            {
+                TimeZoneSelection.Utc => DateTimeKind.Utc,
+                TimeZoneSelection.Local => DateTimeKind.Local,
+                _ => DateTimeKind.Local
+            };
+
+            var effective = DateTime.SpecifyKind(dateInput, kind);
+            var dto = new DateTimeOffset(effective);
+
+            unixSeconds = dto.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
+            unixMilliseconds = dto.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
+            dateUtcSummary = dto.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+            dateLocalSummary = dto.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss 'GMT'zzz", CultureInfo.InvariantCulture);
+        }
+        catch (Exception ex)
+        {
+            dateError = ex.Message;
+            unixSeconds = null;
+            unixMilliseconds = null;
+            dateUtcSummary = null;
+            dateLocalSummary = null;
+        }
+    }
+
+    private void UseCurrentTimestamp()
+    {
+        var now = DateTimeOffset.UtcNow;
+        timestampInput = timestampUnit == TimestampUnit.Seconds
+            ? now.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture)
+            : now.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
+        ConvertTimestamp();
+    }
+
+    private void UseNowForDate()
+    {
+        dateInput = DateTime.Now;
+        dateInterpretation = TimeZoneSelection.Local;
+        ConvertDate();
+    }
+
+    private void FillTimestampFromDate()
+    {
+        if (string.IsNullOrWhiteSpace(unixSeconds))
+        {
+            return;
+        }
+
+        timestampUnit = TimestampUnit.Seconds;
+        timestampInput = unixSeconds;
+        timestampOutputZone = TimeZoneSelection.Both;
+        ConvertTimestamp();
+    }
+
+    private string BuildRelativeDescription(DateTimeOffset utc)
+    {
+        var now = DateTimeOffset.UtcNow;
+        var diff = now - utc;
+        var direction = diff.TotalSeconds >= 0 ? "ago" : "from now";
+        var span = diff.Duration();
+
+        string unit;
+        double value;
+        if (span.TotalDays >= 365)
+        {
+            value = span.TotalDays / 365;
+            unit = "year";
+        }
+        else if (span.TotalDays >= 30)
+        {
+            value = span.TotalDays / 30;
+            unit = "month";
+        }
+        else if (span.TotalDays >= 1)
+        {
+            value = span.TotalDays;
+            unit = "day";
+        }
+        else if (span.TotalHours >= 1)
+        {
+            value = span.TotalHours;
+            unit = "hour";
+        }
+        else if (span.TotalMinutes >= 1)
+        {
+            value = span.TotalMinutes;
+            unit = "minute";
+        }
+        else
+        {
+            value = span.TotalSeconds;
+            unit = "second";
+        }
+
+        var rounded = Math.Max(1, (int)Math.Round(value));
+        var suffix = rounded == 1 ? unit : unit + "s";
+        return $"Approximately {rounded} {suffix} {direction}.";
+    }
+
+    private async Task CopyAsync(string? value, string buttonId)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            await JSRuntime.InvokeVoidAsync("copyToClipboard", value, buttonId);
+        }
+    }
+}
