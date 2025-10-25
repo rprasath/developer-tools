@@ -1,94 +1,165 @@
-﻿@page "/"
+@page "/"
 
-<div class="max-w-screen-xl mx-auto">
-    <div class="text-center mb-12">
-        <h1 class="text-4xl font-bold text-gray-800 mb-4">Developer Tools</h1>
-        <p class="text-xl text-gray-600">A collection of helpful tools for developers</p>
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div class="text-center space-y-3">
+        <h1 class="text-4xl font-bold text-gray-800">Developer Tools</h1>
+        <p class="text-lg md:text-xl text-gray-600">
+            A growing collection of everyday helpers for busy developers.
+        </p>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- Replace Line Breaks Tool -->
-
-        <NavLink class="tool-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
-            href="replacelinebreaks">
-            <div class="p-6">
-                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-                    </svg>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-800 mb-2">Replace Line Breaks</h2>
-                <p class="text-gray-600">Convert between line breaks and other formats like SQL queries, comma-separated
-                    lists, and more.</p>
-            </div>
-        </NavLink>
-
-        <!-- GUID Helpers Tool -->
-        <NavLink class="tool-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
-            href="guidhelpers">
-            <div class="p-6">
-                <div class="w-12 h-12 bg-green-100 text-green-600 rounded-lg flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5" />
-                    </svg>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-800 mb-2">GUID Helpers</h2>
-                <p class="text-gray-600">Generate GUIDs, convert between GUID and long/int values, and split GUIDs into
-                    components.</p>
-            </div>
-        </NavLink>
-
-        <!-- String Formatter Tool -->
-        <NavLink class="tool-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
-            href="stringformatter">
-            <div class="p-6">
-                <div class="w-12 h-12 bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-                    </svg>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-800 mb-2">String Formatter</h2>
-                <p class="text-gray-600">Format JSON and SQL, change case, and perform Base64/URL encoding and decoding.
-                </p>
-            </div>
-        </NavLink>
-
-        <!-- JSON Edit/Sort Tool -->
-        <NavLink class="tool-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
-            href="jsoneditsort">
-            <div class="p-6">
-                <div class="w-12 h-12 bg-yellow-100 text-yellow-600 rounded-lg flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
-                    </svg>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-800 mb-2">JSON Edit/Sort</h2>
-                <p class="text-gray-600">Sort JSON data by property and exclude specific fields from the output.</p>
-            </div>
-        </NavLink>
-
-        <!-- Compare Tool -->
-        <NavLink class="tool-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
-            href="compare">
-            <div class="p-6">
-                <div class="w-12 h-12 bg-red-100 text-red-600 rounded-lg flex items-center justify-center mb-4">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
-                        stroke="currentColor" class="w-6 h-6">
-                        <path stroke-linecap="round" stroke-linejoin="round"
-                            d="M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3" />
-                    </svg>
-                </div>
-                <h2 class="text-xl font-semibold text-gray-800 mb-2">Compare Tool</h2>
-                <p class="text-gray-600">Compare text or code side by side with an interactive diff editor.</p>
-            </div>
-        </NavLink>
+    <div class="bg-white rounded-lg shadow-md p-6">
+        <label for="tool-search" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
+            Find a tool
+        </label>
+        <div class="flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 focus-within:border-blue-400">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd"
+                      d="M12.9 14.32a8 8 0 111.414-1.414l4.387 4.387a1 1 0 01-1.414 1.414l-4.387-4.387zM14 8a6 6 0 11-12 0 6 6 0 0112 0z"
+                      clip-rule="evenodd" />
+            </svg>
+            <input id="tool-search"
+                   @bind="searchTerm"
+                   @bind:event="oninput"
+                   type="search"
+                   placeholder="Search by name or description..."
+                   class="w-full bg-transparent focus:outline-none text-gray-700" />
+        </div>
+        <p class="text-xs text-gray-500 mt-2">
+            Type to quickly filter the tools below. New additions are highlighted for easy discovery.
+        </p>
     </div>
+
+    <section class="space-y-6">
+        <h2 class="text-2xl font-semibold text-gray-800">All tools</h2>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            @if (!FilteredTools.Any())
+            {
+                <div class="col-span-full">
+                    <div class="bg-white border border-dashed border-gray-300 rounded-lg p-8 text-center text-gray-500">
+                        No tools matched your search. Try a different keyword or clear the search box.
+                    </div>
+                </div>
+            }
+            else
+            {
+                @foreach (var tool in FilteredTools)
+                {
+                    <NavLink class="tool-card bg-white rounded-lg shadow-md overflow-hidden hover:shadow-xl transition-shadow"
+                             href="@tool.Route">
+                        <div class="p-6 flex flex-col h-full">
+                            <div class="flex items-start gap-4 mb-4">
+                                <div class="@($"w-12 h-12 {tool.IconClasses} rounded-lg flex items-center justify-center")">
+                                    @((MarkupString)tool.IconSvg)
+                                </div>
+                                <div class="flex-1 space-y-1">
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="text-xl font-semibold text-gray-800">@tool.Title</h3>
+                                        @if (!string.IsNullOrWhiteSpace(tool.Badge))
+                                        {
+                                            <span class="@($"text-xs font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full {tool.BadgeClasses}")">
+                                                @tool.Badge
+                                            </span>
+                                        }
+                                    </div>
+                                    <p class="text-sm text-gray-600 leading-relaxed">@tool.Description</p>
+                                </div>
+                            </div>
+                            <div class="mt-auto text-sm text-blue-600 font-medium flex items-center gap-1">
+                                <span>Open tool</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5H5.25A2.25 2.25 0 003 6.75v11a2.25 2.25 0 002.25 2.25h11a2.25 2.25 0 002.25-2.25V10.5m-6-6h6m0 0v6m0-6L10.5 15" />
+                                </svg>
+                            </div>
+                        </div>
+                    </NavLink>
+                }
+            }
+        </div>
+    </section>
 </div>
+
+@code {
+    private string? searchTerm;
+
+    private IEnumerable<ToolCard> FilteredTools => string.IsNullOrWhiteSpace(searchTerm)
+        ? toolCards
+        : toolCards.Where(tool =>
+            tool.Title.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+            tool.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+
+    private readonly List<ToolCard> toolCards = new()
+    {
+        new(
+            "Replace Line Breaks",
+            "Convert line separated content into SQL statements, comma separated lists, and more.",
+            "replacelinebreaks",
+            "bg-blue-100 text-blue-600",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"w-6 h-6\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z\" /></svg>")
+        ,
+        new(
+            "GUID Helpers",
+            "Generate GUIDs and convert between GUID values and long/int representations.",
+            "guidhelpers",
+            "bg-green-100 text-green-600",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"w-6 h-6\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1.232 1.232.65 3.318-1.067 3.611A48.309 48.309 0 0112 21c-2.773 0-5.491-.235-8.135-.687-1.718-.293-2.3-2.379-1.067-3.61L5 14.5\" /></svg>")
+        ,
+        new(
+            "String Formatter",
+            "Format JSON, SQL and text, switch casing, and encode or decode Base64/URLs.",
+            "stringformatter",
+            "bg-purple-100 text-purple-600",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"w-6 h-6\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M3 4.5h18M3 9h18M9 13.5h6M4.5 18h15\" /></svg>")
+        ,
+        new(
+            "JSON Edit/Sort",
+            "Sort JSON objects by property, remove fields, and tidy payloads for sharing.",
+            "jsoneditsort",
+            "bg-yellow-100 text-yellow-600",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"w-6 h-6\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z\" /></svg>")
+        ,
+        new(
+            "Compare Tool",
+            "Review differences between two snippets with an interactive diff editor.",
+            "compare",
+            "bg-red-100 text-red-600",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"w-6 h-6\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M19.5 12c0-1.232-.046-2.453-.138-3.662a4.006 4.006 0 00-3.7-3.7 48.678 48.678 0 00-7.324 0 4.006 4.006 0 00-3.7 3.7c-.017.22-.032.441-.046.662M19.5 12l3-3m-3 3l-3-3m-12 3c0 1.232.046 2.453.138 3.662a4.006 4.006 0 003.7 3.7 48.656 48.656 0 007.324 0 4.006 4.006 0 003.7-3.7c.017-.22.032-.441.046-.662M4.5 12l3 3m-3-3l-3 3\" /></svg>")
+        ,
+        new(
+            "Unix Timestamp Converter",
+            "Quickly convert between Unix timestamps and human-readable dates in UTC or local time.",
+            "unixtimestamp",
+            "bg-indigo-100 text-indigo-600",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"w-6 h-6\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M12 6v6l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z\" /></svg>",
+            "New",
+            "bg-indigo-100 text-indigo-700")
+        ,
+        new(
+            "JWT Decoder",
+            "Decode and pretty-print JSON Web Tokens without sending data to a server.",
+            "jwtdecoder",
+            "bg-emerald-100 text-emerald-600",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"w-6 h-6\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M16.5 10.5V6.75A2.25 2.25 0 0014.25 4.5h-9A2.25 2.25 0 003 6.75v10.5A2.25 2.25 0 005.25 19.5h9a2.25 2.25 0 002.25-2.25V13.5m0-3l3 3m-3-3l-3 3\" /></svg>",
+            "New",
+            "bg-emerald-100 text-emerald-700")
+        ,
+        new(
+            "Regex Tester",
+            "Experiment with .NET regular expressions, view captured groups, and test replacements.",
+            "regextester",
+            "bg-orange-100 text-orange-600",
+            "<svg xmlns=\"http://www.w3.org/2000/svg\" fill=\"none\" viewBox=\"0 0 24 24\" stroke-width=\"1.5\" stroke=\"currentColor\" class=\"w-6 h-6\"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" d=\"M8.25 6.75h9m-9 3H12m-5.25 3h9m-9 3H12m7.5-9L21 9.75m-1.5 3L21 15.75m-1.5 3L21 21\" /></svg>",
+            "New",
+            "bg-orange-100 text-orange-700")
+    };
+
+    private record ToolCard(
+        string Title,
+        string Description,
+        string Route,
+        string IconClasses,
+        string IconSvg,
+        string? Badge = null,
+        string? BadgeClasses = null);
+}

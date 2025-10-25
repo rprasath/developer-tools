@@ -1,0 +1,398 @@
+@page "/jwtdecoder"
+@inject IJSRuntime JSRuntime
+@using System.Text
+@using System.Text.Json
+@using System.Globalization
+@using System.Linq
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">JWT Decoder</h1>
+        <p class="text-gray-600 mt-2">
+            Inspect JSON Web Tokens safely in your browser. Decode the header and payload, review key claims, and copy
+            formatted JSON without sending your token across the network.
+        </p>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 space-y-4">
+        <label class="block text-sm font-medium text-gray-700" for="jwt-input">Paste a JWT</label>
+        <textarea id="jwt-input" @bind="jwtInput" class="w-full h-40 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
+        <div class="flex flex-wrap gap-3">
+            <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors" @onclick="DecodeJwt">
+                Decode token
+            </button>
+            <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors" @onclick="ClearAll">
+                Clear
+            </button>
+        </div>
+        <p class="text-xs text-gray-500">
+            Tokens are decoded entirely in your browser. Secrets never leave this page.
+        </p>
+    </div>
+
+    @if (!string.IsNullOrWhiteSpace(decodeError))
+    {
+        <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+            @decodeError
+        </div>
+    }
+    else if (headerClaims is not null && payloadClaims is not null)
+    {
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-lg shadow-md p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-gray-800">Header</h2>
+                    <button id="copy-header" class="text-gray-500 hover:text-gray-700" @onclick="CopyHeaderAsync" title="Copy header JSON">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-md p-3 text-sm">
+                    <pre class="whitespace-pre-wrap break-all font-mono text-xs">@headerJson</pre>
+                </div>
+                <table class="w-full text-sm text-left">
+                    <tbody>
+                        @foreach (var claim in headerClaims)
+                        {
+                            <tr class="border-b border-gray-100 last:border-none">
+                                <td class="py-1 pr-3 font-semibold text-gray-700">@claim.Key</td>
+                                <td class="py-1 text-gray-600">@claim.Value</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-md p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-xl font-semibold text-gray-800">Payload</h2>
+                    <button id="copy-payload" class="text-gray-500 hover:text-gray-700" @onclick="CopyPayloadAsync" title="Copy payload JSON">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-md p-3 text-sm">
+                    <pre class="whitespace-pre-wrap break-all font-mono text-xs">@payloadJson</pre>
+                </div>
+                <div class="space-y-2 text-sm">
+                    @if (!string.IsNullOrWhiteSpace(subjectClaim))
+                    {
+                        <p><span class="font-semibold text-gray-700">Subject:</span> <span class="text-gray-600">@subjectClaim</span></p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(audienceClaim))
+                    {
+                        <p><span class="font-semibold text-gray-700">Audience:</span> <span class="text-gray-600">@audienceClaim</span></p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(issuerClaim))
+                    {
+                        <p><span class="font-semibold text-gray-700">Issuer:</span> <span class="text-gray-600">@issuerClaim</span></p>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(issuedAtSummary) || !string.IsNullOrWhiteSpace(expiresAtSummary) || !string.IsNullOrWhiteSpace(notBeforeSummary))
+                    {
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs text-gray-500">
+                            @if (!string.IsNullOrWhiteSpace(issuedAtSummary))
+                            {
+                                <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
+                                    <span class="block font-semibold uppercase text-gray-500">Issued</span>
+                                    <span class="block">@issuedAtSummary</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(notBeforeSummary))
+                            {
+                                <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
+                                    <span class="block font-semibold uppercase text-gray-500">Valid from</span>
+                                    <span class="block">@notBeforeSummary</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(expiresAtSummary))
+                            {
+                                <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
+                                    <span class="block font-semibold uppercase text-gray-500">Expires</span>
+                                    <span class="block">@expiresAtSummary</span>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+                <table class="w-full text-sm text-left">
+                    <tbody>
+                        @foreach (var claim in payloadClaims)
+                        {
+                            <tr class="border-b border-gray-100 last:border-none">
+                                <td class="py-1 pr-3 font-semibold text-gray-700">@claim.Key</td>
+                                <td class="py-1 text-gray-600">@claim.Value</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow-md p-6 space-y-3">
+            <h2 class="text-xl font-semibold text-gray-800">Signature</h2>
+            <p class="text-sm text-gray-600">
+                The signature verifies the token was issued by a trusted party. You can copy it for debugging or to
+                compare with another token.
+            </p>
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-md p-3 font-mono text-xs break-all">
+                <span>@signature</span>
+                <button id="copy-signature" class="text-gray-500 hover:text-gray-700 ml-3" @onclick="CopySignatureAsync" title="Copy signature">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private string? jwtInput;
+    private string? headerJson;
+    private string? payloadJson;
+    private Dictionary<string, string>? headerClaims;
+    private Dictionary<string, string>? payloadClaims;
+    private string? signature;
+    private string? decodeError;
+    private string? issuedAtSummary;
+    private string? expiresAtSummary;
+    private string? notBeforeSummary;
+    private string? subjectClaim;
+    private string? audienceClaim;
+    private string? issuerClaim;
+
+    private void DecodeJwt()
+    {
+        decodeError = null;
+        headerJson = null;
+        payloadJson = null;
+        headerClaims = null;
+        payloadClaims = null;
+        signature = null;
+        issuedAtSummary = null;
+        expiresAtSummary = null;
+        notBeforeSummary = null;
+        subjectClaim = null;
+        audienceClaim = null;
+        issuerClaim = null;
+
+        if (string.IsNullOrWhiteSpace(jwtInput))
+        {
+            decodeError = "Paste a JWT to decode.";
+            return;
+        }
+
+        var parts = jwtInput.Split('.');
+        if (parts.Length < 2)
+        {
+            decodeError = "A JWT must contain at least a header and payload separated by periods.";
+            return;
+        }
+
+        try
+        {
+            headerJson = FormatJson(Base64UrlDecode(parts[0]));
+            payloadJson = FormatJson(Base64UrlDecode(parts[1]));
+            signature = parts.Length > 2 ? parts[2] : string.Empty;
+
+            headerClaims = ParseClaims(headerJson);
+            payloadClaims = ParseClaims(payloadJson);
+
+            if (payloadClaims is not null)
+            {
+                payloadClaims.Remove("exp");
+                payloadClaims.Remove("nbf");
+                payloadClaims.Remove("iat");
+            }
+
+            if (!string.IsNullOrWhiteSpace(payloadJson))
+            {
+                using var payloadDoc = JsonDocument.Parse(payloadJson);
+                var root = payloadDoc.RootElement;
+                issuedAtSummary = GetTimeClaim(root, "iat");
+                expiresAtSummary = GetTimeClaim(root, "exp");
+                notBeforeSummary = GetTimeClaim(root, "nbf");
+                subjectClaim = TryGetString(root, "sub");
+                issuerClaim = TryGetString(root, "iss");
+                audienceClaim = ExtractAudience(root);
+            }
+        }
+        catch (Exception ex)
+        {
+            decodeError = $"Unable to decode token: {ex.Message}";
+        }
+    }
+
+    private void ClearAll()
+    {
+        jwtInput = string.Empty;
+        headerJson = null;
+        payloadJson = null;
+        headerClaims = null;
+        payloadClaims = null;
+        signature = null;
+        decodeError = null;
+        issuedAtSummary = null;
+        expiresAtSummary = null;
+        notBeforeSummary = null;
+        subjectClaim = null;
+        audienceClaim = null;
+        issuerClaim = null;
+    }
+
+    private static string Base64UrlDecode(string input)
+    {
+        var sanitized = input.Replace('-', '+').Replace('_', '/');
+        switch (sanitized.Length % 4)
+        {
+            case 2:
+                sanitized += "==";
+                break;
+            case 3:
+                sanitized += "=";
+                break;
+        }
+
+        var bytes = Convert.FromBase64String(sanitized);
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+    private static string FormatJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return string.Empty;
+        }
+
+        using var doc = JsonDocument.Parse(json);
+        return JsonSerializer.Serialize(doc.RootElement, new JsonSerializerOptions
+        {
+            WriteIndented = true
+        });
+    }
+
+    private static Dictionary<string, string>? ParseClaims(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+        {
+            return null;
+        }
+
+        using var doc = JsonDocument.Parse(json);
+        var result = new Dictionary<string, string>();
+        foreach (var property in doc.RootElement.EnumerateObject())
+        {
+            result[property.Name] = FormatValue(property.Value);
+        }
+
+        return result;
+    }
+
+    private static string FormatValue(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString() ?? string.Empty,
+            JsonValueKind.Number => element.TryGetInt64(out var longValue)
+                ? longValue.ToString(CultureInfo.InvariantCulture)
+                : element.GetDouble().ToString(CultureInfo.InvariantCulture),
+            JsonValueKind.True => "true",
+            JsonValueKind.False => "false",
+            JsonValueKind.Null => "null",
+            JsonValueKind.Array => string.Join(", ", element.EnumerateArray().Select(FormatValue)),
+            JsonValueKind.Object => JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = false }),
+            _ => element.ToString()
+        };
+    }
+
+    private static string? GetTimeClaim(JsonElement root, string propertyName)
+    {
+        if (!root.TryGetProperty(propertyName, out var element))
+        {
+            return null;
+        }
+
+        if (!element.TryGetInt64(out var unix))
+        {
+            return null;
+        }
+
+        var dto = DateTimeOffset.FromUnixTimeSeconds(unix);
+        var relative = BuildRelative(dto);
+        return $"{dto.ToUniversalTime():yyyy-MM-dd HH:mm:ss 'UTC'} ({relative})";
+    }
+
+    private static string BuildRelative(DateTimeOffset dto)
+    {
+        var diff = DateTimeOffset.UtcNow - dto;
+        var direction = diff.TotalSeconds >= 0 ? "ago" : "from now";
+        var span = diff.Duration();
+
+        string unit;
+        double value;
+        if (span.TotalDays >= 1)
+        {
+            value = span.TotalDays;
+            unit = "day";
+        }
+        else if (span.TotalHours >= 1)
+        {
+            value = span.TotalHours;
+            unit = "hour";
+        }
+        else if (span.TotalMinutes >= 1)
+        {
+            value = span.TotalMinutes;
+            unit = "minute";
+        }
+        else
+        {
+            value = span.TotalSeconds;
+            unit = "second";
+        }
+
+        var rounded = Math.Max(1, (int)Math.Round(value));
+        return rounded == 1
+            ? $"{rounded} {unit} {direction}"
+            : $"{rounded} {unit}s {direction}";
+    }
+
+    private static string? TryGetString(JsonElement root, string propertyName)
+    {
+        return root.TryGetProperty(propertyName, out var element) && element.ValueKind == JsonValueKind.String
+            ? element.GetString()
+            : null;
+    }
+
+    private static string? ExtractAudience(JsonElement root)
+    {
+        if (!root.TryGetProperty("aud", out var element))
+        {
+            return null;
+        }
+
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => element.GetString(),
+            JsonValueKind.Array => string.Join(", ", element.EnumerateArray().Select(e => e.ValueKind == JsonValueKind.String ? e.GetString() : e.ToString())),
+            _ => element.ToString()
+        };
+    }
+
+    private Task CopyHeaderAsync() => CopyAsync(headerJson, "copy-header");
+
+    private Task CopyPayloadAsync() => CopyAsync(payloadJson, "copy-payload");
+
+    private Task CopySignatureAsync() => CopyAsync(signature, "copy-signature");
+
+    private async Task CopyAsync(string? value, string buttonId)
+    {
+        if (!string.IsNullOrWhiteSpace(value))
+        {
+            await JSRuntime.InvokeVoidAsync("copyToClipboard", value, buttonId);
+        }
+    }
+}
