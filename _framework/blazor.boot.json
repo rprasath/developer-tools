@@ -1,7 +1,7 @@
 {
   "mainAssemblyName": "DevTools",
   "resources": {
-    "hash": "sha256-wSDjgK1r7JB37mTiPTxuaykxJlIx6x5pc6pAbi+TeY8=",
+    "hash": "sha256-wVrPPUj3KRjQ3XH65xbDcD63E/Ezo8HgC0sbEvKJfqw=",
     "fingerprinting": {
       "BlazorMonaco.i33mlyw1st.wasm": "BlazorMonaco.wasm",
       "Microsoft.AspNetCore.Components.s68khoiaep.wasm": "Microsoft.AspNetCore.Components.wasm",
@@ -65,7 +65,7 @@
       "System.Xml.XDocument.ocxzop4g63.wasm": "System.Xml.XDocument.wasm",
       "System.8rv0tdtrxz.wasm": "System.wasm",
       "System.Private.CoreLib.jogawqraq5.wasm": "System.Private.CoreLib.wasm",
-      "DevTools.ovvfnbsi0c.wasm": "DevTools.wasm",
+      "DevTools.413n1ytnhw.wasm": "DevTools.wasm",
       "dotnet.native.qdj5gxypz1.js": "dotnet.native.js",
       "dotnet.native.0s5gjpogh3.wasm": "dotnet.native.wasm",
       "dotnet.js": "dotnet.js",
@@ -153,7 +153,7 @@
       "System.Xml.ReaderWriter.1otkvd7d8u.wasm": "sha256-z6lJ2dLqjFO8i9yDuWV50JqG5CuDqO1ssAfKN80tAic=",
       "System.Xml.XDocument.ocxzop4g63.wasm": "sha256-mO8Myb/YHsEXA9rrh5dZinveqXGkEbaG2JNi9ZpvjnY=",
       "System.8rv0tdtrxz.wasm": "sha256-xMF0eauQ5DkSzUozHLFFMQnL6DSJO09nJLtgag+Dzbw=",
-      "DevTools.ovvfnbsi0c.wasm": "sha256-3O0rKMoLmfD9nzwEE/lI5HnQFMmddY7F7wX4yVs4T3E="
+      "DevTools.413n1ytnhw.wasm": "sha256-6JeOC6Q56F30w+frbOOt6e0xd7QspwShMqSH/UBlUiw="
     }
   },
   "cacheBootResources": true,
