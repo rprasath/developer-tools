@@ -1,0 +1,308 @@
+@page "/sqlformatter"
+@using System.Linq
+@using System.Text
+@using System.Text.RegularExpressions
+@inject IJSRuntime JSRuntime
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">SQL Formatter</h1>
+        <p class="text-gray-600 mt-2">
+            Normalize casing, split long statements into readable blocks, and indent clauses with a single click.
+            Formatting happens entirely in your browser so you can work safely with production queries.
+        </p>
+    </div>
+
+    <section class="bg-white rounded-lg shadow-md overflow-hidden">
+        <header class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-gray-800">Input</h2>
+        </header>
+        <div class="p-6 space-y-4">
+            <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                <div class="lg:col-span-3">
+                    <label class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2" for="sql-input">
+                        Paste SQL
+                    </label>
+                    <textarea id="sql-input"
+                              @bind="InputSql"
+                              class="w-full h-72 p-3 border border-gray-300 rounded-md font-mono text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              placeholder="SELECT ..."></textarea>
+                </div>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+                    <h3 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Options</h3>
+                    <label class="flex items-center gap-3 text-sm text-gray-700">
+                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" @bind="UppercaseKeywords" />
+                        Uppercase keywords
+                    </label>
+                    <label class="flex items-center gap-3 text-sm text-gray-700">
+                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" @bind="BreakOnCommas" />
+                        Break SELECT lists on commas
+                    </label>
+                    <label class="flex items-center gap-3 text-sm text-gray-700">
+                        <input type="checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" @bind="AlignLogicalOperators" />
+                        Indent AND/OR inside WHERE
+                    </label>
+                    <div class="space-y-1">
+                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wide" for="indent-size">
+                            Indent size
+                        </label>
+                        <input id="indent-size"
+                               type="number"
+                               min="2"
+                               max="8"
+                               @bind="IndentSize"
+                               class="w-24 border border-gray-300 rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm" />
+                    </div>
+                    <div class="flex flex-col gap-2 pt-2">
+                        <button @onclick="FormatSql"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                            Format SQL
+                        </button>
+                        <button @onclick="Reset"
+                                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500">
+                Keywords include common ANSI SQL statements, JOINs, and logical operators. The formatter preserves
+                comments and quoted literal values.
+            </p>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-lg shadow-md overflow-hidden">
+        <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-gray-800">Formatted SQL</h2>
+            <button @onclick="CopyOutput"
+                    id="sql-formatter-copy"
+                    class="text-gray-500 hover:text-gray-700"
+                    title="Copy to clipboard">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+            </button>
+        </header>
+        <div class="p-6">
+            <pre class="bg-gray-50 border border-gray-200 rounded-lg p-4 overflow-auto text-sm leading-6 font-mono min-h-[12rem]">@FormattedSql</pre>
+            <p class="text-xs text-gray-500 mt-3">
+                Indentation is calculated based on parentheses and block keywords. Use the copy button for direct paste
+                into SQL Server Management Studio, Azure Data Studio, or any SQL editor.
+            </p>
+        </div>
+    </section>
+</div>
+
+@code {
+    private string InputSql { get; set; } = string.Empty;
+    private string FormattedSql { get; set; } = string.Empty;
+    private bool UppercaseKeywords { get; set; } = true;
+    private bool BreakOnCommas { get; set; } = true;
+    private bool AlignLogicalOperators { get; set; } = true;
+    private int IndentSize { get; set; } = 4;
+
+    private static readonly string[] ClauseBreaks =
+    {
+        "SELECT", "FROM", "WHERE", "GROUP BY", "HAVING", "ORDER BY",
+        "INSERT INTO", "VALUES", "UPDATE", "SET", "DELETE FROM",
+        "LEFT JOIN", "RIGHT JOIN", "INNER JOIN", "OUTER JOIN", "JOIN",
+        "ON", "UNION", "UNION ALL", "EXCEPT", "INTERSECT"
+    };
+
+    private static readonly string[] KeywordList =
+    {
+        "select", "from", "where", "group by", "having", "order by", "insert", "into", "values",
+        "update", "set", "delete", "merge", "when", "then", "else", "end", "join", "left", "right",
+        "full", "inner", "outer", "on", "and", "or", "not", "exists", "in", "case", "as", "distinct",
+        "top", "with", "nolock", "union", "except", "intersect", "over", "partition", "by"
+    };
+
+    private async Task CopyOutput()
+    {
+        if (string.IsNullOrWhiteSpace(FormattedSql))
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("copyToClipboard", FormattedSql, "sql-formatter-copy");
+    }
+
+    private void Reset()
+    {
+        InputSql = string.Empty;
+        FormattedSql = string.Empty;
+    }
+
+    private void FormatSql()
+    {
+        if (string.IsNullOrWhiteSpace(InputSql))
+        {
+            FormattedSql = string.Empty;
+            return;
+        }
+
+        var working = InputSql.Trim();
+
+        if (UppercaseKeywords)
+        {
+            working = ApplyKeywordCasing(working);
+        }
+
+        working = NormalizeWhitespace(working);
+        working = InsertClauseBreaks(working, UppercaseKeywords);
+
+        if (BreakOnCommas)
+        {
+            working = BreakSelectLists(working);
+        }
+
+        var lines = working.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                           .Select(line => line.TrimEnd())
+                           .ToList();
+
+        var builder = new StringBuilder();
+        var indentLevel = 0;
+        foreach (var rawLine in lines)
+        {
+            var line = rawLine.Trim();
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            var closingParenCount = line.Count(c => c == ')');
+            var openingParenCount = line.Count(c => c == '(');
+
+            if (closingParenCount > openingParenCount && line.StartsWith(")"))
+            {
+                indentLevel = Math.Max(0, indentLevel - (closingParenCount - openingParenCount));
+            }
+            else if (line.StartsWith(")") || line.StartsWith("END"))
+            {
+                indentLevel = Math.Max(0, indentLevel - 1);
+            }
+
+            var indent = new string(' ', Math.Max(0, indentLevel) * IndentSize);
+            builder.AppendLine(indent + line);
+
+            if (line.EndsWith("(") || openingParenCount > closingParenCount)
+            {
+                indentLevel += Math.Max(1, openingParenCount - closingParenCount);
+            }
+            else if (openingParenCount < closingParenCount)
+            {
+                indentLevel = Math.Max(0, indentLevel - (closingParenCount - openingParenCount));
+            }
+            else if (StartsNewBlock(line))
+            {
+                indentLevel++;
+            }
+
+            if (AlignLogicalOperators && IsLogicalOperator(line))
+            {
+                indentLevel = Math.Max(1, indentLevel);
+            }
+        }
+
+        FormattedSql = builder.ToString().TrimEnd();
+    }
+
+    private static bool StartsNewBlock(string line)
+    {
+        return line.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("FROM", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("WHERE", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("GROUP BY", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("HAVING", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("ORDER BY", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("VALUES", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("SET", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsLogicalOperator(string line)
+    {
+        return line.StartsWith("AND ", StringComparison.OrdinalIgnoreCase) ||
+               line.StartsWith("OR ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string NormalizeWhitespace(string value)
+    {
+        value = Regex.Replace(value, @"[ \t]+", " ");
+        value = Regex.Replace(value, @"\s*\n\s*", "\n");
+        return value;
+    }
+
+    private static string ApplyKeywordCasing(string sql)
+    {
+        return KeywordList.Aggregate(sql, (current, keyword) =>
+            Regex.Replace(
+                current,
+                $@"\b{Regex.Escape(keyword)}\b",
+                keyword.ToUpperInvariant(),
+                RegexOptions.IgnoreCase));
+    }
+
+    private static string InsertClauseBreaks(string sql, bool uppercase)
+    {
+        var orderedClauseBreaks = ClauseBreaks.OrderByDescending(c => c.Length);
+        foreach (var clause in orderedClauseBreaks)
+        {
+            sql = Regex.Replace(
+                sql,
+                $@"\s*{Regex.Escape(clause)}\b",
+                match =>
+                {
+                    var token = match.Value.Trim();
+                    return "\n" + (uppercase ? clause : token);
+                },
+                RegexOptions.IgnoreCase);
+        }
+
+        sql = Regex.Replace(sql, @"\n{2,}", "\n");
+        sql = sql.TrimStart('\n');
+        return sql;
+    }
+
+    private static string BreakSelectLists(string sql)
+    {
+        var lines = sql.Split('\n');
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var line = lines[i];
+            if (!line.TrimStart().StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var selectIndex = line.IndexOf("SELECT", StringComparison.OrdinalIgnoreCase);
+            if (selectIndex < 0)
+            {
+                continue;
+            }
+
+            var selectPart = line.Substring(selectIndex + 6).Trim();
+            if (!selectPart.Contains(','))
+            {
+                continue;
+            }
+
+            var prefix = line.Substring(0, selectIndex + 6);
+            var columns = selectPart.Split(',')
+                                    .Select(c => c.Trim())
+                                    .Where(c => c.Length > 0)
+                                    .ToList();
+
+            var builder = new StringBuilder();
+            builder.AppendLine(prefix + " " + columns.First());
+            foreach (var column in columns.Skip(1))
+            {
+                builder.AppendLine("    , " + column);
+            }
+
+            lines[i] = builder.ToString().TrimEnd();
+        }
+
+        return string.Join("\n", lines);
+    }
+}

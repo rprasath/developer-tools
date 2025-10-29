@@ -1,63 +1,298 @@
-﻿@page "/compare"
-@using BlazorMonaco;
-@using BlazorMonaco.Editor;
-@inject IJSRuntime JSRuntime;
+@page "/compare"
+@using System.Linq
+@using BlazorMonaco
+@using BlazorMonaco.Editor
+@using Microsoft.JSInterop
+@inject IJSRuntime JSRuntime
 
-<div class="max-w-screen-xl mx-auto">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Compare</h1>
+<div class="max-w-screen-xl mx-auto space-y-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">Diff Viewer</h1>
+            <p class="text-gray-600">
+                Compare any two snippets with Monaco’s diff view. Configure the theme, layout, and formatting options to
+                match your workflow.
+            </p>
+        </div>
+        <div class="flex flex-wrap gap-2">
+            <button @onclick="LoadSampleDiff"
+                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                Load example
+            </button>
+            <button @onclick="SwapSidesAsync"
+                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                Swap panes
+            </button>
+            <button @onclick="ClearEditorsAsync"
+                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                Clear both
+            </button>
+        </div>
+    </div>
 
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="p-4">
-            <p class="text-gray-600 mb-4">Use this tool to compare two pieces of text or code side by side. The left editor is editable.</p>
-            
-            <div class="monaco-editor-container border border-gray-300 rounded-lg overflow-hidden" style="height: 70vh;">
-                <StandaloneDiffEditor @ref="_diffEditor" Id="diff-editor" ConstructionOptions="DiffEditorConstructionOptions" OnDidInit="EditorOnDidInit" />
+        <div class="border-b border-gray-200 px-6 py-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="theme-select">Theme</label>
+                    <select id="theme-select"
+                            @bind="SelectedTheme"
+                            @bind:event="onchange"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="vs">Light</option>
+                        <option value="vs-dark">Dark</option>
+                        <option value="hc-black">High contrast</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="font-select">Font size</label>
+                    <select id="font-select"
+                            @bind="FontSize"
+                            @bind:event="onchange"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        @foreach (var size in FontSizeOptions)
+                        {
+                            <option value="@size">@size px</option>
+                        }
+                    </select>
+                </div>
+                <div class="flex flex-col justify-center gap-2">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="RenderSideBySide" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Side-by-side view
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="WordWrap" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Word wrap
+                    </label>
+                </div>
+                <div class="flex flex-col justify-center gap-2">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="OriginalEditable" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Original editable
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="ShowWhitespace" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Show whitespace
+                    </label>
+                </div>
             </div>
+        </div>
+
+        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
+            <div class="flex flex-wrap gap-3 text-xs text-gray-600">
+                <span class="uppercase tracking-wide font-semibold text-gray-700">Helpful shortcuts:</span>
+                <span><kbd class="inline-block px-2 py-1 bg-white border border-gray-300 rounded">Cmd/Ctrl + F</kbd> find</span>
+                <span><kbd class="inline-block px-2 py-1 bg-white border border-gray-300 rounded">Cmd/Ctrl + S</kbd> save selection</span>
+                <span><kbd class="inline-block px-2 py-1 bg-white border border-gray-300 rounded">Alt + F1</kbd> command palette</span>
+            </div>
+        </div>
+
+        <div class="relative h-[70vh] border-t border-gray-200">
+            <StandaloneDiffEditor @ref="_diffEditor"
+                                  Id="diff-editor"
+                                  ConstructionOptions="DiffEditorConstructionOptions"
+                                  OnDidInit="EditorOnDidInit" />
         </div>
     </div>
 </div>
 
 @code {
-    private StandaloneDiffEditor? _diffEditor { get; set; }
+    private StandaloneDiffEditor? _diffEditor;
+    private TextModel? _originalModel;
+    private TextModel? _modifiedModel;
+
+    private string selectedTheme = "vs";
+    private string SelectedTheme
+    {
+        get => selectedTheme;
+        set
+        {
+            if (selectedTheme != value)
+            {
+                selectedTheme = value;
+                _ = InvokeAsync(ApplyThemeAsync);
+            }
+        }
+    }
+
+    private int fontSize = 14;
+    private int FontSize
+    {
+        get => fontSize;
+        set
+        {
+            if (fontSize != value)
+            {
+                fontSize = value;
+                _ = InvokeAsync(ApplyOptionsAsync);
+            }
+        }
+    }
+
+    private bool renderSideBySide = true;
+    private bool RenderSideBySide
+    {
+        get => renderSideBySide;
+        set
+        {
+            if (renderSideBySide != value)
+            {
+                renderSideBySide = value;
+                _ = InvokeAsync(ApplyOptionsAsync);
+            }
+        }
+    }
+
+    private bool wordWrap = true;
+    private bool WordWrap
+    {
+        get => wordWrap;
+        set
+        {
+            if (wordWrap != value)
+            {
+                wordWrap = value;
+                _ = InvokeAsync(ApplyOptionsAsync);
+            }
+        }
+    }
+
+    private bool originalEditable = true;
+    private bool OriginalEditable
+    {
+        get => originalEditable;
+        set
+        {
+            if (originalEditable != value)
+            {
+                originalEditable = value;
+                _ = InvokeAsync(ApplyOptionsAsync);
+            }
+        }
+    }
+
+    private bool showWhitespace;
+    private bool ShowWhitespace
+    {
+        get => showWhitespace;
+        set
+        {
+            if (showWhitespace != value)
+            {
+                showWhitespace = value;
+                _ = InvokeAsync(ApplyOptionsAsync);
+            }
+        }
+    }
+
+    private IReadOnlyList<int> FontSizeOptions { get; } = Enumerable.Range(10, 15).ToArray();
 
     private StandaloneDiffEditorConstructionOptions DiffEditorConstructionOptions(StandaloneDiffEditor editor)
     {
         return new StandaloneDiffEditorConstructionOptions
-            {
-                OriginalEditable = true,
-                EnableSplitViewResizing = true,
-                Theme = "vs",
-                AutomaticLayout = true,
-                ScrollBeyondLastLine = false
-            };
+        {
+            OriginalEditable = originalEditable,
+            EnableSplitViewResizing = true,
+            Theme = SelectedTheme,
+            AutomaticLayout = true,
+            ScrollBeyondLastLine = false,
+            RenderSideBySide = renderSideBySide,
+            WordWrap = wordWrap ? "on" : "off",
+            RenderWhitespace = showWhitespace ? "all" : "none",
+            FontSize = FontSize
+        };
     }
 
     private async Task EditorOnDidInit()
     {
-        if(_diffEditor == null)
+        if (_diffEditor is null)
         {
             return;
         }
-        
-        // Get or create the original model
-        TextModel original_model = await Global.GetModel(JSRuntime, "editor-originalModel");
-        if (original_model == null)
-        {
-            original_model = await Global.CreateModel(JSRuntime, "", "json", "editor-originalModel");
-        }
 
-        // Get or create the modified model
-        TextModel modified_model = await Global.GetModel(JSRuntime, "editor-modifiedModel");
-        if (modified_model == null)
-        {
-            modified_model = await Global.CreateModel(JSRuntime, "", "json", "editor-modifiedModel");
-        }
+        _originalModel = await EnsureModelAsync("editor-originalModel");
+        _modifiedModel = await EnsureModelAsync("editor-modifiedModel");
 
-        // Set the editor model
         await _diffEditor.SetModel(new DiffEditorModel
-            {
-                Original = original_model,
-                Modified = modified_model
-            });
+        {
+            Original = _originalModel,
+            Modified = _modifiedModel
+        });
+
+        await ApplyThemeAsync();
+        await ApplyOptionsAsync();
+    }
+
+    private async Task<TextModel> EnsureModelAsync(string uri)
+    {
+        var model = await Global.GetModel(JSRuntime, uri);
+        if (model == null)
+        {
+            model = await Global.CreateModel(JSRuntime, string.Empty, "plaintext", uri);
+        }
+        return model;
+    }
+
+    private async Task ApplyThemeAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("monaco.editor.setTheme", SelectedTheme);
+    }
+
+    private async Task ApplyOptionsAsync()
+    {
+        if (_diffEditor is null)
+        {
+            return;
+        }
+
+        await _diffEditor.UpdateOptions(new DiffEditorOptions
+        {
+            RenderSideBySide = RenderSideBySide,
+            OriginalEditable = OriginalEditable,
+            WordWrap = WordWrap ? "on" : "off",
+            RenderWhitespace = ShowWhitespace ? "all" : "none",
+            FontSize = FontSize
+        });
+    }
+
+    private async Task SwapSidesAsync()
+    {
+        if (_originalModel is null || _modifiedModel is null)
+        {
+            return;
+        }
+
+        var originalValue = await _originalModel.GetValue(null, null);
+        var modifiedValue = await _modifiedModel.GetValue(null, null);
+
+        await _originalModel.SetValue(modifiedValue);
+        await _modifiedModel.SetValue(originalValue);
+    }
+
+    private async Task ClearEditorsAsync()
+    {
+        if (_originalModel is null || _modifiedModel is null)
+        {
+            return;
+        }
+
+        await _originalModel.SetValue(string.Empty);
+        await _modifiedModel.SetValue(string.Empty);
+    }
+
+    private async Task LoadSampleDiff()
+    {
+        if (_originalModel is null || _modifiedModel is null)
+        {
+            return;
+        }
+
+        const string original = "{\n    \"id\": 42,\n    \"name\": \"Contoso\",\n    \"isActive\": true,\n    \"roles\": [ \"admin\", \"owner\" ],\n    \"metadata\": {\n        \"tier\": \"standard\",\n        \"region\": \"us-east\"\n    }\n}";
+
+        const string modified = "{\n    \"id\": 42,\n    \"name\": \"Contoso, Ltd.\",\n    \"isActive\": false,\n    \"roles\": [ \"admin\", \"owner\", \"auditor\" ],\n    \"metadata\": {\n        \"tier\": \"premium\",\n        \"region\": \"eu-west\",\n        \"flags\": [ \"beta\", \"rollout-1\" ]\n    },\n    \"updatedAt\": \"2024-03-01T08:30:00Z\"\n}";
+
+        await _originalModel.SetValue(original);
+        await _modifiedModel.SetValue(modified);
     }
 }

@@ -1,164 +1,151 @@
-﻿@page "/stringformatter"
+@page "/stringformatter"
 @using Newtonsoft.Json
 @using NSQLFormatter
+@using System.Globalization
+@using System.Linq
+@using System.Text
+@using System.Text.RegularExpressions
 @inject IJSRuntime JSRuntime
 
-<div class="max-w-screen-xl mx-auto">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">String Formatters</h1>
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">String Workbench</h1>
+        <p class="text-gray-600 mt-2">
+            Format, encode, and reshape text without leaving the browser. Choose an operation below—everything runs
+            locally so sensitive payloads never leave your machine.
+        </p>
+    </div>
 
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
-            <!-- Input Area -->
-            <div class="flex flex-col">
-                <label for="inputTxt" class="text-sm font-medium text-gray-700 mb-2">Input</label>
-                <textarea @bind="Input" class="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" id="inputTxt"></textarea>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+            <div class="flex flex-col space-y-3">
+                <div class="flex items-center justify-between">
+                    <label for="inputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Input</label>
+                    <div class="flex items-center gap-2 text-xs">
+                        <button @onclick="PasteSampleJson"
+                                class="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                            Sample JSON
+                        </button>
+                        <button @onclick="ClearInput"
+                                class="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+                <textarea @bind="Input"
+                          class="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                          id="inputTxt"
+                          placeholder="Paste or type text to transform..."></textarea>
+                <button @onclick="SwapInputAndOutput"
+                        class="self-start px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-700">
+                    Swap with output
+                </button>
             </div>
 
-            <!-- Output Area -->
-            <div class="flex flex-col relative">
-                <label for="outputTxt" class="text-sm font-medium text-gray-700 mb-2">Output</label>
-                <textarea @bind="Output" class="w-full h-64 p-3 border border-gray-300 rounded-md bg-gray-50" id="outputTxt" readonly></textarea>
-                <button @onclick="CopyOutputToClipboard" 
-                        id="copy-format-output-btn" 
-                        class="absolute right-2 top-10 text-gray-500 hover:text-gray-700 focus:outline-none"
-                        title="Copy to clipboard">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                </button>
+            <div class="flex flex-col space-y-3 relative">
+                <div class="flex items-center justify-between">
+                    <label for="outputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Output</label>
+                    <button @onclick="CopyOutputToClipboard"
+                            id="copy-format-output-btn"
+                            class="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+                            title="Copy to clipboard">
+                        Copy
+                    </button>
+                </div>
+                <textarea class="w-full h-64 p-3 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm"
+                          id="outputTxt"
+                          readonly>@Output</textarea>
+                @if (!string.IsNullOrWhiteSpace(OperationMessage) || Statistics is not null)
+                {
+                    <div class="bg-gray-50 border border-gray-200 rounded-md p-3 text-xs text-gray-600 space-y-1">
+                        @if (!string.IsNullOrWhiteSpace(OperationMessage))
+                        {
+                            <p class="font-semibold text-gray-700">@OperationMessage</p>
+                        }
+                        @if (Statistics is not null)
+                        {
+                            <p>Characters: @Statistics.Characters • Words: @Statistics.Words • Lines: @Statistics.Lines • Bytes (UTF-8): @Statistics.Bytes</p>
+                            @if (Statistics.ReadingTimeMinutes.HasValue)
+                            {
+                                <p>Approx. reading time: @Statistics.ReadingTimeMinutes.Value.ToString("0.0", CultureInfo.InvariantCulture) minute(s)</p>
+                            }
+                        }
+                    </div>
+                }
             </div>
         </div>
 
-        <!-- Action Buttons -->
-        <div class="p-6 pt-0 flex flex-wrap gap-2">
-            <button @onclick="FormatJson" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                JSON
-            </button>
-            <button @onclick="FormatSQL" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
-                SQL
-            </button>
-            <button @onclick="Upper" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
-                Upper
-            </button>
-            <button @onclick="Lower" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
-                Lower
-            </button>
-            <button @onclick="Base64EncodeText" class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors">
-                Base64 Encode
-            </button>
-            <button @onclick="Base64DecodeText" class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
-                Base64 Decode
-            </button>
-            <button @onclick="URLEncodeText" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
-                URL Encode
-            </button>
-            <button @onclick="URLDecodeText" class="px-4 py-2 bg-pink-600 text-white rounded-md hover:bg-pink-700 transition-colors">
-                URL Decode
-            </button>
+        <div class="border-t border-gray-200 bg-gray-50 px-6 py-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                <section class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                    <header>
+                        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Format &amp; encode</h2>
+                        <p class="text-xs text-gray-500">Tidy structured content and convert between common encodings.</p>
+                    </header>
+                    <div class="flex flex-wrap gap-2">
+                        <button @onclick="FormatJson" class="@($"{PillButton} bg-blue-600")">Pretty JSON</button>
+                        <button @onclick="MinifyJson" class="@($"{PillButton} bg-blue-500")">Minify JSON</button>
+                        <button @onclick="FormatSQL" class="@($"{PillButton} bg-green-600")">Format SQL</button>
+                        <button @onclick="EscapeJson" class="@($"{PillButton} bg-indigo-600")">Escape JSON</button>
+                        <button @onclick="UnescapeJson" class="@($"{PillButton} bg-indigo-500")">Unescape JSON</button>
+                        <button @onclick="Base64EncodeText" class="@($"{PillButton} bg-yellow-600")">Base64 encode</button>
+                        <button @onclick="Base64DecodeText" class="@($"{PillButton} bg-yellow-500")">Base64 decode</button>
+                        <button @onclick="URLEncodeText" class="@($"{PillButton} bg-pink-600")">URL encode</button>
+                        <button @onclick="URLDecodeText" class="@($"{PillButton} bg-pink-500")">URL decode</button>
+                    </div>
+                </section>
+
+                <section class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                    <header>
+                        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Casing &amp; naming</h2>
+                        <p class="text-xs text-gray-500">Reshape identifiers for code, documentation, and display text.</p>
+                    </header>
+                    <div class="flex flex-wrap gap-2">
+                        <button @onclick="Upper" class="@($"{PillButton} bg-purple-600")">Uppercase</button>
+                        <button @onclick="Lower" class="@($"{PillButton} bg-purple-500")">Lowercase</button>
+                        <button @onclick="TitleCase" class="@($"{PillButton} bg-teal-600")">Title case</button>
+                        <button @onclick="PascalCase" class="@($"{PillButton} bg-teal-500")">PascalCase</button>
+                        <button @onclick="CamelCase" class="@($"{PillButton} bg-teal-400")">camelCase</button>
+                        <button @onclick="SnakeCase" class="@($"{PillButton} bg-orange-600")">snake_case</button>
+                        <button @onclick="KebabCase" class="@($"{PillButton} bg-orange-500")">kebab-case</button>
+                    </div>
+                </section>
+
+                <section class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+                    <header>
+                        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Lines &amp; whitespace</h2>
+                        <p class="text-xs text-gray-500">Quick clean-up helpers for bulk edits.</p>
+                    </header>
+                    <div class="flex flex-wrap gap-2">
+                        <button @onclick="TrimWhitespace" class="@($"{PillButton} bg-slate-600")">Trim whitespace</button>
+                        <button @onclick="CollapseWhitespace" class="@($"{PillButton} bg-slate-500")">Collapse spaces</button>
+                        <button @onclick="RemoveDuplicateLines" class="@($"{PillButton} bg-slate-400")">Unique lines</button>
+                        <button @onclick="SortLines" class="@($"{PillButton} bg-blue-700")">Sort A→Z</button>
+                        <button @onclick="ReverseLines" class="@($"{PillButton} bg-blue-500")">Reverse lines</button>
+                    </div>
+                </section>
+
+                <section class="bg-white border border-gray-200 rounded-lg p-4 space-y-3 xl:col-span-3">
+                    <header class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Utilities</h2>
+                            <p class="text-xs text-gray-500">Analyse, mirror, or share the current text.</p>
+                        </div>
+                        <div class="flex items-center gap-2 text-xs">
+                            <button @onclick="ReverseText" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                                Reverse text
+                            </button>
+                            <button @onclick="AnalyzeText" class="px-3 py-1 bg-gray-900 text-white rounded-md hover:bg-black transition-colors">
+                                Analyse
+                            </button>
+                        </div>
+                    </header>
+                    <p class="text-xs text-gray-500">
+                        Need to restore the original input? Use the swap button above, or simply run the operation again
+                        if it is reversible (e.g. encode → decode).
+                    </p>
+                </section>
+            </div>
         </div>
     </div>
 </div>
-
-@code {
-    public string? Input { get; set; }
-    public string? Output { get; set; }
-
-    private void FormatJson()
-    {
-        if (string.IsNullOrWhiteSpace(Input))
-        {
-            return;
-        }
-
-        try
-        {
-            dynamic? parsedJson = JsonConvert.DeserializeObject(Input);
-            Output = JsonConvert.SerializeObject(parsedJson, Formatting.Indented);
-        }
-        catch
-        {
-            Output = "Error";
-        }
-    }
-
-    private void FormatSQL()
-    {
-        if (string.IsNullOrWhiteSpace(Input))
-        {
-            return;
-        }
-
-        try
-        {
-            Output = NSQLFormatter.Formatter.Format(Input);
-        }
-        catch
-        {
-            Output = "Error";
-        }
-    }
-
-    private void Upper()
-    {
-        Output = Input?.ToUpper();
-    }
-
-    private void Lower()
-    {
-        Output = Input?.ToLower();
-    }
-
-    private void Base64EncodeText()
-    {
-        if (string.IsNullOrWhiteSpace(Input))
-        {
-            return;
-        }
-        Output = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(Input));
-    }
-
-    private void Base64DecodeText()
-    {
-        if (string.IsNullOrWhiteSpace(Input))
-        {
-            return;
-        }
-
-        try
-        {
-            Output = System.Text.Encoding.UTF8.GetString(Convert.FromBase64String(Input));
-        }
-        catch (Exception ex)
-        {
-            Output = ex.ToString();
-        }
-    }
-
-    private void URLEncodeText()
-    {
-        if (string.IsNullOrWhiteSpace(Input))
-        {
-            return;
-        }
-
-        Output = System.Net.WebUtility.UrlEncode(Input);
-    }
-
-    private void URLDecodeText()
-    {
-        if (string.IsNullOrWhiteSpace(Input))
-        {
-            return;
-        }
-
-        Output = System.Net.WebUtility.UrlDecode(Input);
-    }
-    
-    private async Task CopyOutputToClipboard()
-    {
-        if (!string.IsNullOrEmpty(Output))
-        {
-            await JSRuntime.InvokeVoidAsync("copyToClipboard", Output, "copy-format-output-btn");
-        }
-    }
-}

@@ -1,5 +1,6 @@
 @page "/unixtimestamp"
 @inject IJSRuntime JSRuntime
+@using System.Collections.Generic
 @using System.Globalization
 
 <div class="max-w-screen-xl mx-auto space-y-8">
@@ -44,6 +45,16 @@
                             <option value="Both">Show both</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="offset-input">Additional offset</label>
+                        <input id="offset-input"
+                               type="text"
+                               @bind="additionalOffsetInput"
+                               @bind:event="oninput"
+                               class="w-32 border border-gray-300 rounded-md px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                               placeholder="+05:30" />
+                        <p class="text-[11px] text-gray-500 mt-1">Optional extra timezone (e.g. +02, -0730, Z).</p>
+                    </div>
                     <button class="ml-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
                             @onclick="ConvertTimestamp">
                         Convert
@@ -66,7 +77,13 @@
                             <div>
                                 <span class="block text-xs uppercase text-gray-500 font-semibold">UTC</span>
                                 <span class="block text-gray-800 font-medium">@timestampUtc</span>
-                                <span class="block text-xs text-gray-500">@timestampUtcIso</span>
+                                <div class="text-xs text-gray-500 space-y-1 mt-1">
+                                    <div><span class="font-semibold">ISO</span> @timestampUtcIso</div>
+                                    @if (!string.IsNullOrWhiteSpace(timestampUtcRfc))
+                                    {
+                                        <div><span class="font-semibold">RFC 1123</span> @timestampUtcRfc</div>
+                                    }
+                                </div>
                             </div>
                             <button id="copy-utc" class="text-gray-500 hover:text-gray-700" @onclick="CopyUtcAsync" title="Copy UTC time">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -81,7 +98,9 @@
                             <div>
                                 <span class="block text-xs uppercase text-gray-500 font-semibold">Local</span>
                                 <span class="block text-gray-800 font-medium">@timestampLocal</span>
-                                <span class="block text-xs text-gray-500">@timestampLocalIso</span>
+                                <div class="text-xs text-gray-500 space-y-1 mt-1">
+                                    <div><span class="font-semibold">ISO</span> @timestampLocalIso</div>
+                                </div>
                             </div>
                             <button id="copy-local" class="text-gray-500 hover:text-gray-700" @onclick="CopyLocalAsync" title="Copy local time">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -90,9 +109,45 @@
                             </button>
                         </div>
                     }
-                    @if (!string.IsNullOrWhiteSpace(timestampRelative))
+                    @if (!string.IsNullOrWhiteSpace(timestampCustom))
                     {
-                        <p class="text-xs text-gray-500">@timestampRelative</p>
+                        <div class="flex items-start justify-between bg-gray-50 border border-gray-200 rounded-md p-3">
+                            <div>
+                                <span class="block text-xs uppercase text-gray-500 font-semibold">@timestampCustomLabel</span>
+                                <span class="block text-gray-800 font-medium">@timestampCustom</span>
+                                <div class="text-xs text-gray-500 space-y-1 mt-1">
+                                    <div><span class="font-semibold">ISO</span> @timestampCustomIso</div>
+                                </div>
+                            </div>
+                            <button id="copy-custom" class="text-gray-500 hover:text-gray-700" @onclick="CopyCustomAsync" title="Copy custom time">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(timestampCustomError))
+                    {
+                        <div class="rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs px-3 py-2">
+                            @timestampCustomError
+                        </div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(timestampCalendarSummary) || !string.IsNullOrWhiteSpace(timestampRelative))
+                    {
+                        <div class="bg-white border border-gray-200 rounded-md p-3 text-xs text-gray-600 space-y-1">
+                            @if (!string.IsNullOrWhiteSpace(timestampCalendarSummary))
+                            {
+                                <div><span class="font-semibold uppercase text-gray-500">Calendar</span> @timestampCalendarSummary</div>
+                                @if (!string.IsNullOrWhiteSpace(timestampUnixHex))
+                                {
+                                    <div><span class="font-semibold uppercase text-gray-500">Unix (hex)</span> @timestampUnixHex</div>
+                                }
+                            }
+                            @if (!string.IsNullOrWhiteSpace(timestampRelative))
+                            {
+                                <div>@timestampRelative</div>
+                            }
+                        </div>
                     }
                 </div>
             }
@@ -172,9 +227,85 @@
                             <span class="block">@dateLocalSummary</span>
                         </div>
                     </div>
+                    @if (!string.IsNullOrWhiteSpace(dateIso8601) || !string.IsNullOrWhiteSpace(dateRfc1123))
+                    {
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-gray-500">
+                            @if (!string.IsNullOrWhiteSpace(dateIso8601))
+                            {
+                                <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
+                                    <span class="block font-semibold uppercase text-gray-500">ISO 8601</span>
+                                    <span class="block">@dateIso8601</span>
+                                </div>
+                            }
+                            @if (!string.IsNullOrWhiteSpace(dateRfc1123))
+                            {
+                                <div class="bg-gray-50 border border-gray-200 rounded-md p-3">
+                                    <span class="block font-semibold uppercase text-gray-500">RFC 1123</span>
+                                    <span class="block">@dateRfc1123</span>
+                                </div>
+                            }
+                        </div>
+                    }
                 </div>
             }
         </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow-md p-6 space-y-4">
+        <div class="flex items-center justify-between">
+            <h2 class="text-xl font-semibold text-gray-800">Difference calculator</h2>
+            <span class="text-xs text-gray-500">Measure the gap between two timestamps.</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="diff-start">Start</label>
+                <input id="diff-start" type="text" @bind="diffStartInput" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 1700000000" />
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="diff-end">End</label>
+                <input id="diff-end" type="text" @bind="diffEndInput" class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" placeholder="e.g. 1700864000" />
+            </div>
+        </div>
+
+        <div class="flex flex-wrap gap-3 items-center">
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1">Units</label>
+                <select @bind="diffUnit" class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                    <option value="Seconds">Seconds</option>
+                    <option value="Milliseconds">Milliseconds</option>
+                </select>
+            </div>
+            <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors" @onclick="ComputeDifference">
+                Calculate
+            </button>
+            <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors" @onclick="ClearDifference">
+                Reset
+            </button>
+            @if (!string.IsNullOrWhiteSpace(diffSummary))
+            {
+                <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors" id="copy-diff" @onclick="CopyDifferenceAsync">
+                    Copy result
+                </button>
+            }
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(diffError))
+        {
+            <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+                @diffError
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(diffSummary))
+        {
+            <div class="space-y-2 text-sm text-gray-700">
+                <p class="font-medium">@diffSummary</p>
+                @if (!string.IsNullOrWhiteSpace(diffDetail))
+                {
+                    <p class="text-xs text-gray-500">@diffDetail</p>
+                }
+            </div>
+        }
     </div>
 </div>
 
@@ -200,6 +331,17 @@
     private string? timestampLocal;
     private string? timestampLocalIso;
     private string? timestampRelative;
+    private string? timestampUtcRfc;
+    private string? timestampDayOfWeek;
+    private string? timestampDayOfYear;
+    private string? timestampWeekOfYear;
+    private string? timestampUnixHex;
+    private string? timestampCalendarSummary;
+    private string? timestampCustom;
+    private string? timestampCustomIso;
+    private string? timestampCustomLabel;
+    private string? timestampCustomError;
+    private string? additionalOffsetInput = string.Empty;
     private string? timestampError;
 
     private DateTime dateInput = DateTime.Now;
@@ -208,7 +350,16 @@
     private string? unixMilliseconds;
     private string? dateUtcSummary;
     private string? dateLocalSummary;
+    private string? dateIso8601;
+    private string? dateRfc1123;
     private string? dateError;
+
+    private string diffStartInput = string.Empty;
+    private string diffEndInput = string.Empty;
+    private TimestampUnit diffUnit = TimestampUnit.Seconds;
+    private string? diffSummary;
+    private string? diffDetail;
+    private string? diffError;
 
     protected override void OnInitialized()
     {
@@ -224,6 +375,16 @@
         timestampLocal = null;
         timestampLocalIso = null;
         timestampRelative = null;
+        timestampUtcRfc = null;
+        timestampDayOfWeek = null;
+        timestampDayOfYear = null;
+        timestampWeekOfYear = null;
+        timestampUnixHex = null;
+        timestampCalendarSummary = null;
+        timestampCustom = null;
+        timestampCustomIso = null;
+        timestampCustomLabel = null;
+        timestampCustomError = null;
 
         if (!long.TryParse(timestampInput, out var value))
         {
@@ -244,6 +405,7 @@
             {
                 timestampUtc = utc.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
                 timestampUtcIso = utc.ToString("O", CultureInfo.InvariantCulture);
+                timestampUtcRfc = utc.ToString("R", CultureInfo.InvariantCulture);
             }
 
             if (timestampOutputZone is TimeZoneSelection.Local or TimeZoneSelection.Both)
@@ -251,6 +413,30 @@
                 var localFormat = "yyyy-MM-dd HH:mm:ss 'GMT'zzz";
                 timestampLocal = local.ToString(localFormat, CultureInfo.InvariantCulture);
                 timestampLocalIso = local.ToString("O", CultureInfo.InvariantCulture);
+            }
+
+            var dayOfYear = utc.DayOfYear;
+            var daysInYear = DateTime.IsLeapYear(utc.Year) ? 366 : 365;
+            var isoWeek = CultureInfo.InvariantCulture.Calendar.GetWeekOfYear(utc.DateTime, CalendarWeekRule.FirstFourDayWeek, DayOfWeek.Monday);
+            timestampDayOfWeek = utc.ToString("dddd", CultureInfo.InvariantCulture);
+            timestampDayOfYear = $"{dayOfYear} of {daysInYear}";
+            timestampWeekOfYear = isoWeek.ToString("D2", CultureInfo.InvariantCulture);
+            timestampUnixHex = "0x" + utc.ToUnixTimeSeconds().ToString("X", CultureInfo.InvariantCulture);
+            timestampCalendarSummary = $"Day {dayOfYear} of {daysInYear} • ISO week {timestampWeekOfYear} • {timestampDayOfWeek}";
+
+            if (!string.IsNullOrWhiteSpace(additionalOffsetInput))
+            {
+                if (TryParseOffset(additionalOffsetInput, out var offset))
+                {
+                    var custom = utc.ToOffset(offset);
+                    timestampCustomLabel = offset == TimeSpan.Zero ? "UTC" : $"UTC{offset:+hh\\:mm;-hh\\:mm}";
+                    timestampCustom = custom.ToString("yyyy-MM-dd HH:mm:ss 'GMT'zzz", CultureInfo.InvariantCulture);
+                    timestampCustomIso = custom.ToString("O", CultureInfo.InvariantCulture);
+                }
+                else
+                {
+                    timestampCustomError = "Unable to parse offset. Use formats like +02, -0730, or Z.";
+                }
             }
 
             timestampRelative = BuildRelativeDescription(utc);
@@ -264,6 +450,12 @@
     private void ConvertDate()
     {
         dateError = null;
+        unixSeconds = null;
+        unixMilliseconds = null;
+        dateUtcSummary = null;
+        dateLocalSummary = null;
+        dateIso8601 = null;
+        dateRfc1123 = null;
 
         try
         {
@@ -281,14 +473,12 @@
             unixMilliseconds = dto.ToUnixTimeMilliseconds().ToString(CultureInfo.InvariantCulture);
             dateUtcSummary = dto.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
             dateLocalSummary = dto.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss 'GMT'zzz", CultureInfo.InvariantCulture);
+            dateIso8601 = dto.ToString("O", CultureInfo.InvariantCulture);
+            dateRfc1123 = dto.ToUniversalTime().ToString("R", CultureInfo.InvariantCulture);
         }
         catch (Exception ex)
         {
             dateError = ex.Message;
-            unixSeconds = null;
-            unixMilliseconds = null;
-            dateUtcSummary = null;
-            dateLocalSummary = null;
         }
     }
 
@@ -319,6 +509,54 @@
         timestampInput = unixSeconds;
         timestampOutputZone = TimeZoneSelection.Both;
         ConvertTimestamp();
+    }
+
+    private void ComputeDifference()
+    {
+        diffError = null;
+        diffSummary = null;
+        diffDetail = null;
+
+        if (!long.TryParse(diffStartInput, NumberStyles.Integer, CultureInfo.InvariantCulture, out var startRaw) ||
+            !long.TryParse(diffEndInput, NumberStyles.Integer, CultureInfo.InvariantCulture, out var endRaw))
+        {
+            diffError = "Enter numeric values for both timestamps.";
+            return;
+        }
+
+        try
+        {
+            DateTimeOffset start = diffUnit == TimestampUnit.Seconds
+                ? DateTimeOffset.FromUnixTimeSeconds(startRaw)
+                : DateTimeOffset.FromUnixTimeMilliseconds(startRaw);
+
+            DateTimeOffset end = diffUnit == TimestampUnit.Seconds
+                ? DateTimeOffset.FromUnixTimeSeconds(endRaw)
+                : DateTimeOffset.FromUnixTimeMilliseconds(endRaw);
+
+            var span = end - start;
+            var direction = span.TotalMilliseconds >= 0 ? "later" : "earlier";
+            var magnitude = span.Duration();
+
+            var startDisplay = start.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+            var endDisplay = end.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+
+            diffSummary = $"{startDisplay} → {endDisplay} is {FormatDuration(magnitude)} {direction}.";
+            diffDetail = $"Total: {magnitude.TotalSeconds:N0} seconds • {magnitude.TotalMinutes:N2} minutes • {magnitude.TotalHours:N2} hours • {magnitude.TotalDays:N4} days";
+        }
+        catch (ArgumentOutOfRangeException ex)
+        {
+            diffError = ex.Message;
+        }
+    }
+
+    private void ClearDifference()
+    {
+        diffStartInput = string.Empty;
+        diffEndInput = string.Empty;
+        diffSummary = null;
+        diffDetail = null;
+        diffError = null;
     }
 
     private string BuildRelativeDescription(DateTimeOffset utc)
@@ -366,9 +604,108 @@
         return $"Approximately {rounded} {suffix} {direction}.";
     }
 
+    private bool TryParseOffset(string? input, out TimeSpan offset)
+    {
+        offset = TimeSpan.Zero;
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return false;
+        }
+
+        var trimmed = input.Trim();
+        if (string.Equals(trimmed, "Z", StringComparison.OrdinalIgnoreCase) || trimmed == "0")
+        {
+            offset = TimeSpan.Zero;
+            return true;
+        }
+
+        if (!trimmed.StartsWith('+') && !trimmed.StartsWith('-'))
+        {
+            trimmed = "+" + trimmed;
+        }
+
+        trimmed = trimmed.Replace(":", string.Empty, StringComparison.Ordinal);
+        if (trimmed.Length < 3 || trimmed.Length > 5)
+        {
+            return false;
+        }
+
+        var sign = trimmed[0] == '-' ? -1 : 1;
+        var digits = trimmed[1..];
+
+        if (digits.Length == 2)
+        {
+            digits += "00";
+        }
+        else if (digits.Length == 3)
+        {
+            digits = digits.Insert(2, "0");
+        }
+
+        if (digits.Length != 4 ||
+            !int.TryParse(digits[..2], NumberStyles.None, CultureInfo.InvariantCulture, out var hours) ||
+            !int.TryParse(digits[2..], NumberStyles.None, CultureInfo.InvariantCulture, out var minutes))
+        {
+            return false;
+        }
+
+        if (hours < 0 || hours > 14 || minutes < 0 || minutes >= 60)
+        {
+            return false;
+        }
+
+        var span = new TimeSpan(hours, minutes, 0);
+        offset = sign > 0 ? span : span.Negate();
+        return true;
+    }
+
+    private string FormatDuration(TimeSpan span)
+    {
+        var parts = new List<string>();
+        if (span.Days > 0)
+        {
+            parts.Add($"{span.Days} day{(span.Days == 1 ? string.Empty : "s")}");
+        }
+        if (span.Hours > 0)
+        {
+            parts.Add($"{span.Hours} hour{(span.Hours == 1 ? string.Empty : "s")}");
+        }
+        if (span.Minutes > 0)
+        {
+            parts.Add($"{span.Minutes} minute{(span.Minutes == 1 ? string.Empty : "s")}");
+        }
+        if (span.Seconds > 0 && parts.Count < 3)
+        {
+            parts.Add($"{span.Seconds} second{(span.Seconds == 1 ? string.Empty : "s")}");
+        }
+
+        if (parts.Count == 0)
+        {
+            return $"{Math.Round(span.TotalMilliseconds)} milliseconds";
+        }
+
+        return string.Join(", ", parts);
+    }
+
+    private Task CopyDifferenceAsync()
+    {
+        if (string.IsNullOrWhiteSpace(diffSummary))
+        {
+            return Task.CompletedTask;
+        }
+
+        var payload = diffDetail is { Length: > 0 }
+            ? $"{diffSummary}\n{diffDetail}"
+            : diffSummary;
+
+        return CopyAsync(payload, "copy-diff");
+    }
+
     private Task CopyUtcAsync() => CopyAsync(timestampUtc, "copy-utc");
 
     private Task CopyLocalAsync() => CopyAsync(timestampLocal, "copy-local");
+
+    private Task CopyCustomAsync() => CopyAsync(timestampCustom, "copy-custom");
 
     private Task CopySecondsAsync() => CopyAsync(unixSeconds, "copy-seconds");
 

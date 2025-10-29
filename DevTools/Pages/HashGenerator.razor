@@ -1,0 +1,210 @@
+@page "/hashing"
+@using System.Security.Cryptography
+@using System.Text
+@inject IJSRuntime JSRuntime
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Hash &amp; Checksum</h1>
+        <p class="text-gray-600 mt-2">
+            Quickly calculate hashes for pasted snippets. Great for verifying file integrity, generating cache keys,
+            or producing deterministic identifiers—all without sending data to a server.
+        </p>
+    </div>
+
+    <section class="bg-white rounded-lg shadow-md overflow-hidden">
+        <header class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-gray-800">Input</h2>
+        </header>
+        <div class="p-6 space-y-4">
+            <textarea @bind="InputText"
+                      class="w-full h-48 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                      placeholder="Paste or type any text to hash."></textarea>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-700">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide mb-1" for="hash-encoding">
+                        Text encoding
+                    </label>
+                    <select id="hash-encoding"
+                            @bind="SelectedEncoding"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option>UTF-8</option>
+                        <option>UTF-16</option>
+                        <option>ASCII</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2 mt-6 md:mt-0">
+                    <button @onclick="UseSample"
+                            class="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                        Sample payload
+                    </button>
+                    <button @onclick="ClearInput"
+                            class="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                        Clear
+                    </button>
+                </div>
+                <div class="flex items-center md:justify-end">
+                    <button @onclick="ComputeHashes"
+                            class="mt-6 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        Compute hashes
+                    </button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ValidationMessage))
+            {
+                <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+                    @ValidationMessage
+                </div>
+            }
+        </div>
+    </section>
+
+    @if (HashResults.Count != 0)
+    {
+        <section class="bg-white rounded-lg shadow-md overflow-hidden">
+            <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-800">Digest output</h2>
+                    <p class="text-xs text-gray-500">Copy either the hex representation or the Base64 digest.</p>
+                </div>
+                <span class="text-xs uppercase tracking-wide bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">
+                    @ResolveEncoding(SelectedEncoding).GetByteCount(InputText) bytes
+                </span>
+            </header>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
+                @foreach (var result in HashResults)
+                {
+                    <article class="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50">
+                        <header class="flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">@result.Algorithm</h3>
+                                <p class="text-xs text-gray-500">@result.BitLength-bit digest</p>
+                            </div>
+                            <span class="text-xs text-gray-500">Hex length @result.HexLength</span>
+                        </header>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-xs uppercase text-gray-500 font-semibold">
+                                <span>Hex</span>
+                                <button @onclick="@(() => CopyAsync(result.Hex, BuildHexId(result.Algorithm)))"
+                                        id="@BuildHexId(result.Algorithm)"
+                                        class="text-blue-600 hover:text-blue-700">
+                                    Copy
+                                </button>
+                            </div>
+                            <pre class="bg-white border border-gray-200 rounded-md p-3 font-mono text-xs overflow-auto max-h-40">@result.Hex</pre>
+                        </div>
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between text-xs uppercase text-gray-500 font-semibold">
+                                <span>Base64</span>
+                                <button @onclick="@(() => CopyAsync(result.Base64, BuildBase64Id(result.Algorithm)))"
+                                        id="@BuildBase64Id(result.Algorithm)"
+                                        class="text-blue-600 hover:text-blue-700">
+                                    Copy
+                                </button>
+                            </div>
+                            <pre class="bg-white border border-gray-200 rounded-md p-3 font-mono text-xs overflow-auto max-h-40">@result.Base64</pre>
+                        </div>
+                    </article>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private string InputText { get; set; } = "The quick brown fox jumps over the lazy dog";
+    private string SelectedEncoding { get; set; } = "UTF-8";
+    private string? ValidationMessage { get; set; }
+    private List<HashResult> HashResults { get; set; } = new();
+
+    private readonly List<HashAlgorithmOption> AlgorithmOptions = new()
+    {
+        new("MD5", () => MD5.Create(), 128),
+        new("SHA-1", () => SHA1.Create(), 160),
+        new("SHA-256", () => SHA256.Create(), 256),
+        new("SHA-384", () => SHA384.Create(), 384),
+        new("SHA-512", () => SHA512.Create(), 512)
+    };
+
+    protected override void OnInitialized()
+    {
+        ComputeHashes();
+    }
+
+    private void UseSample()
+    {
+        InputText = "The quick brown fox jumps over the lazy dog";
+        ComputeHashes();
+    }
+
+    private void ClearInput()
+    {
+        InputText = string.Empty;
+        HashResults.Clear();
+        ValidationMessage = null;
+    }
+
+    private async Task CopyAsync(string value, string elementId)
+    {
+        if (string.IsNullOrEmpty(value))
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("copyToClipboard", value, elementId);
+    }
+
+    private static string BuildHexId(string algorithm) => $"{algorithm}-hex";
+    private static string BuildBase64Id(string algorithm) => $"{algorithm}-b64";
+
+    private void ComputeHashes()
+    {
+        ValidationMessage = null;
+        HashResults = new();
+
+        if (string.IsNullOrEmpty(InputText))
+        {
+            ValidationMessage = "Provide some content to hash.";
+            return;
+        }
+
+        byte[] payloadBytes;
+        try
+        {
+            payloadBytes = ResolveEncoding(SelectedEncoding).GetBytes(InputText);
+        }
+        catch (ArgumentException)
+        {
+            ValidationMessage = "Unsupported encoding selected.";
+            return;
+        }
+
+        foreach (var option in AlgorithmOptions)
+        {
+            using var algorithm = option.Factory();
+            var hashBytes = algorithm.ComputeHash(payloadBytes);
+            var hex = Convert.ToHexString(hashBytes);
+            var base64 = Convert.ToBase64String(hashBytes);
+            HashResults.Add(new HashResult(option.Name, option.BitLength, hex, base64));
+        }
+    }
+
+    private static Encoding ResolveEncoding(string selected)
+    {
+        return selected switch
+        {
+            "UTF-16" => Encoding.Unicode,
+            "ASCII" => Encoding.ASCII,
+            _ => Encoding.UTF8
+        };
+    }
+
+    private record HashAlgorithmOption(string Name, Func<HashAlgorithm> Factory, int BitLength);
+
+    private record HashResult(string Algorithm, int BitLength, string Hex, string Base64)
+    {
+        public int HexLength => Hex.Length;
+    }
+}

@@ -1,0 +1,779 @@
+@page "/tabulardata"
+@using System.Globalization
+@using System.Linq
+@using System.Text
+@using System.Text.Json
+@inject IJSRuntime JSRuntime
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Tabular Data Formatter</h1>
+        <p class="text-gray-600 mt-2">
+            Paste rows from Excel, CSV exports, or JSON arrays and instantly reshape them into Markdown tables, SQL
+            insert scripts, normalized JSON, or fresh CSV. Handy for documentation, code reviews, and seed data.
+        </p>
+    </div>
+
+    <section class="bg-white rounded-lg shadow-md overflow-hidden">
+        <header class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-gray-800">Input</h2>
+        </header>
+        <div class="p-6 space-y-4">
+            <textarea @bind="RawInput"
+                      class="w-full h-56 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                      placeholder="Id\tName\tEmail&#10;1\tAda Lovelace\tada@example.com&#10;2\tGrace Hopper\tgrace@example.com"></textarea>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm text-gray-700">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide mb-1" for="input-type">
+                        Input type
+                    </label>
+                    <select id="input-type"
+                            @bind="SelectedInputMode"
+                            @bind:after="OnInputModeChanged"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="Delimited">Delimited text (tab, pipe, etc.)</option>
+                        <option value="Csv">CSV</option>
+                        <option value="Json">JSON array</option>
+                    </select>
+                </div>
+                @if (SelectedInputMode == "Delimited")
+                {
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wide mb-1" for="delimiter">
+                            Delimiter
+                        </label>
+                        <select id="delimiter"
+                                @bind="SelectedDelimiter"
+                                class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            <option>Auto detect</option>
+                            <option>Tab</option>
+                            <option>Comma</option>
+                            <option>Semicolon</option>
+                            <option>Pipe</option>
+                        </select>
+                    </div>
+                }
+                <div class="@($"md:col-span-2 lg:col-span-{(SelectedInputMode == "Delimited" ? 1 : 2)}")">
+                    <label class="block text-xs font-semibold uppercase tracking-wide mb-1" for="table-name">
+                        SQL table name
+                    </label>
+                    <input id="table-name"
+                           type="text"
+                           @bind="TableName"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                           placeholder="#TempData" />
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-4 text-sm text-gray-700">
+                @if (SelectedInputMode != "Json")
+                {
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox"
+                               class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                               @bind="HasHeaderRow" />
+                        Header row included
+                    </label>
+                }
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox"
+                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                           @bind="TrimCells" />
+                    Trim cells
+                </label>
+                <label class="inline-flex items-center gap-2">
+                    <input type="checkbox"
+                           class="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                           @bind="QuoteStringValues" />
+                    Quote string columns in SQL
+                </label>
+            </div>
+
+            @if (SelectedInputMode == "Json")
+            {
+                <p class="text-xs text-gray-500">
+                    Paste an array of objects. Property names become columns and nested values are stringified.
+                </p>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(ParseError))
+            {
+                <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+                    @ParseError
+                </div>
+            }
+        </div>
+    </section>
+
+    <section class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
+        <article class="bg-white rounded-lg shadow-md overflow-hidden">
+            <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800">Markdown table</h3>
+                    <p class="text-xs text-gray-500">Slip this into pull requests, documentation, or wiki pages.</p>
+                </div>
+                <button @onclick="CopyMarkdownAsync"
+                        id="tabular-md-copy"
+                        class="text-gray-500 hover:text-gray-700"
+                        title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </header>
+            <pre class="p-6 bg-gray-50 font-mono text-sm leading-6 min-h-[12rem] overflow-auto">@MarkdownTable</pre>
+        </article>
+
+        <article class="bg-white rounded-lg shadow-md overflow-hidden">
+            <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800">SQL INSERT script</h3>
+                    <p class="text-xs text-gray-500">Seed local databases or craft reproducible bug reports.</p>
+                </div>
+                <button @onclick="CopySqlAsync"
+                        id="tabular-sql-copy"
+                        class="text-gray-500 hover:text-gray-700"
+                        title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </header>
+            <pre class="p-6 bg-gray-50 font-mono text-sm leading-6 min-h-[12rem] overflow-auto">@SqlInsertScript</pre>
+        </article>
+
+        <article class="bg-white rounded-lg shadow-md overflow-hidden">
+            <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800">JSON array</h3>
+                    <p class="text-xs text-gray-500">Hand to frontend teammates or import into API tests.</p>
+                </div>
+                <button @onclick="CopyJsonAsync"
+                        id="tabular-json-copy"
+                        class="text-gray-500 hover:text-gray-700"
+                        title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </header>
+            <pre class="p-6 bg-gray-50 font-mono text-sm leading-6 min-h-[12rem] overflow-auto">@JsonArray</pre>
+        </article>
+
+        <article class="bg-white rounded-lg shadow-md overflow-hidden">
+            <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-semibold text-gray-800">CSV export</h3>
+                    <p class="text-xs text-gray-500">Normalized output ready for spreadsheets or ingestion.</p>
+                </div>
+                <button @onclick="CopyCsvAsync"
+                        id="tabular-csv-copy"
+                        class="text-gray-500 hover:text-gray-700"
+                        title="Copy to clipboard">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                </button>
+            </header>
+            <pre class="p-6 bg-gray-50 font-mono text-sm leading-6 min-h-[12rem] overflow-auto">@CsvOutput</pre>
+        </article>
+    </section>
+</div>
+
+@code {
+    private string RawInput { get; set; } =
+        "Id\tName\tEmail\n1\tAda Lovelace\tada@example.com\n2\tGrace Hopper\tgrace@example.com";
+
+    private string SelectedInputMode { get; set; } = "Delimited";
+    private string SelectedDelimiter { get; set; } = "Auto detect";
+    private bool HasHeaderRow { get; set; } = true;
+    private bool TrimCells { get; set; } = true;
+    private bool QuoteStringValues { get; set; } = true;
+    private string TableName { get; set; } = "#TempData";
+    private string? ParseError { get; set; }
+
+    private ParsedData CurrentData => ParseInput();
+    private IReadOnlyList<string> Headers => CurrentData.Headers;
+    private IReadOnlyList<string[]> DataRows => CurrentData.Rows;
+
+    private string MarkdownTable => BuildMarkdown();
+    private string SqlInsertScript => BuildSqlInsert();
+    private string JsonArray => BuildJson();
+    private string CsvOutput => BuildCsv();
+
+    private Task CopyMarkdownAsync() => Copy(MarkdownTable, "tabular-md-copy");
+    private Task CopySqlAsync() => Copy(SqlInsertScript, "tabular-sql-copy");
+    private Task CopyJsonAsync() => Copy(JsonArray, "tabular-json-copy");
+    private Task CopyCsvAsync() => Copy(CsvOutput, "tabular-csv-copy");
+
+    private async Task Copy(string content, string elementId)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+        {
+            return;
+        }
+
+        await JSRuntime.InvokeVoidAsync("copyToClipboard", content, elementId);
+    }
+
+    private void OnInputModeChanged()
+    {
+        ParseError = null;
+        if (SelectedInputMode == "Json")
+        {
+            HasHeaderRow = false;
+        }
+    }
+
+    private ParsedData ParseInput()
+    {
+        ParseError = null;
+
+        if (string.IsNullOrWhiteSpace(RawInput))
+        {
+            return ParsedData.Empty;
+        }
+
+        try
+        {
+            return SelectedInputMode switch
+            {
+                "Delimited" => ParseDelimitedInput(),
+                "Csv" => ParseCsvInput(),
+                "Json" => ParseJsonInput(),
+                _ => ParsedData.Empty
+            };
+        }
+        catch (JsonException ex)
+        {
+            ParseError = $"JSON error: {ex.Message}";
+        }
+        catch (FormatException ex)
+        {
+            ParseError = ex.Message;
+        }
+
+        return ParsedData.Empty;
+    }
+
+    private ParsedData ParseDelimitedInput()
+    {
+        var delimiter = DetermineDelimiter();
+        var rows = new List<string[]>();
+        var lineSplit = RawInput.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+
+        foreach (var rawLine in lineSplit)
+        {
+            var line = TrimCells ? rawLine.Trim() : rawLine;
+            if (line.Length == 0)
+            {
+                continue;
+            }
+
+            var cells = delimiter == '\t' ? line.Split('\t') : line.Split(delimiter);
+            if (TrimCells)
+            {
+                cells = cells.Select(cell => cell.Trim()).ToArray();
+            }
+
+            if (cells.All(string.IsNullOrWhiteSpace))
+            {
+                continue;
+            }
+
+            rows.Add(cells);
+        }
+
+        return BuildParsedData(rows, HasHeaderRow);
+    }
+
+    private ParsedData ParseCsvInput()
+    {
+        var rows = new List<string[]>();
+        var current = new List<string>();
+        var sb = new StringBuilder();
+        var inQuotes = false;
+
+        for (var i = 0; i < RawInput.Length; i++)
+        {
+            var ch = RawInput[i];
+            if (inQuotes)
+            {
+                if (ch == '"')
+                {
+                    if (i + 1 < RawInput.Length && RawInput[i + 1] == '"')
+                    {
+                        sb.Append('"');
+                        i++;
+                    }
+                    else
+                    {
+                        inQuotes = false;
+                    }
+                }
+                else
+                {
+                    sb.Append(ch);
+                }
+            }
+            else
+            {
+                switch (ch)
+                {
+                    case '"':
+                        inQuotes = true;
+                        break;
+                    case ',':
+                        AppendCell();
+                        break;
+                    case '\r':
+                        break;
+                    case '\n':
+                        AppendCell();
+                        AppendRow();
+                        break;
+                    default:
+                        sb.Append(ch);
+                        break;
+                }
+            }
+        }
+
+        AppendCell();
+        AppendRow();
+
+        return BuildParsedData(rows, HasHeaderRow);
+
+        void AppendCell()
+        {
+            var value = sb.ToString();
+            if (TrimCells)
+            {
+                value = value.Trim();
+            }
+
+            current.Add(value);
+            sb.Clear();
+        }
+
+        void AppendRow()
+        {
+            if (current.Count == 0)
+            {
+                return;
+            }
+
+            var hasContent = current.Any(cell => !string.IsNullOrWhiteSpace(cell));
+            if (!hasContent)
+            {
+                current.Clear();
+                return;
+            }
+
+            rows.Add(current.ToArray());
+            current.Clear();
+        }
+    }
+
+    private ParsedData ParseJsonInput()
+    {
+        using var document = JsonDocument.Parse(RawInput);
+        if (document.RootElement.ValueKind != JsonValueKind.Array)
+        {
+            throw new FormatException("JSON input must be an array at the root.");
+        }
+
+        var elements = document.RootElement.EnumerateArray().ToList();
+        if (elements.Count == 0)
+        {
+            return ParsedData.Empty;
+        }
+
+        var firstNonNull = elements.FirstOrDefault(element => element.ValueKind != JsonValueKind.Null);
+        if (firstNonNull.ValueKind == JsonValueKind.Undefined)
+        {
+            return ParsedData.Empty;
+        }
+
+        if (firstNonNull.ValueKind == JsonValueKind.Object)
+        {
+            var headers = new List<string>();
+            var headerSet = new HashSet<string>(StringComparer.Ordinal);
+
+            foreach (var element in elements)
+            {
+                if (element.ValueKind != JsonValueKind.Object)
+                {
+                    continue;
+                }
+
+                foreach (var property in element.EnumerateObject())
+                {
+                    if (headerSet.Add(property.Name))
+                    {
+                        headers.Add(property.Name);
+                    }
+                }
+            }
+
+            if (headers.Count == 0)
+            {
+                headers.Add("Value");
+            }
+
+            var rows = new List<string[]>();
+            foreach (var element in elements)
+            {
+                if (element.ValueKind != JsonValueKind.Object)
+                {
+                    var fallback = new string[headers.Count];
+                    fallback[0] = JsonElementToCell(element);
+                    rows.Add(fallback);
+                    continue;
+                }
+
+                var row = new string[headers.Count];
+                for (var i = 0; i < headers.Count; i++)
+                {
+                    if (element.TryGetProperty(headers[i], out var value))
+                    {
+                        row[i] = JsonElementToCell(value);
+                    }
+                    else
+                    {
+                        row[i] = string.Empty;
+                    }
+                }
+
+                rows.Add(row);
+            }
+
+            return new ParsedData(headers, rows);
+        }
+
+        if (firstNonNull.ValueKind == JsonValueKind.Array)
+        {
+            var maxColumns = elements
+                .Where(element => element.ValueKind == JsonValueKind.Array)
+                .Select(element => element.GetArrayLength())
+                .DefaultIfEmpty(0)
+                .Max();
+
+            if (maxColumns == 0)
+            {
+                return ParsedData.Empty;
+            }
+
+            var headers = Enumerable.Range(1, maxColumns).Select(i => $"Value{i}").ToList();
+            var rows = new List<string[]>();
+
+            foreach (var element in elements)
+            {
+                if (element.ValueKind != JsonValueKind.Array)
+                {
+                    var fallback = new string[maxColumns];
+                    fallback[0] = JsonElementToCell(element);
+                    rows.Add(fallback);
+                    continue;
+                }
+
+                var row = new string[maxColumns];
+                var index = 0;
+                foreach (var item in element.EnumerateArray())
+                {
+                    if (index >= maxColumns)
+                    {
+                        break;
+                    }
+
+                    row[index] = JsonElementToCell(item);
+                    index++;
+                }
+
+                rows.Add(row);
+            }
+
+            return new ParsedData(headers, rows);
+        }
+
+        var singleHeaders = new List<string> { "Value" };
+        var singleRows = elements.Select(element => new[] { JsonElementToCell(element) }).ToList();
+        return new ParsedData(singleHeaders, singleRows);
+    }
+
+    private ParsedData BuildParsedData(List<string[]> rows, bool treatFirstRowAsHeader)
+    {
+        if (rows.Count == 0)
+        {
+            return ParsedData.Empty;
+        }
+
+        var columnCount = rows.Max(row => row.Length);
+        if (columnCount == 0)
+        {
+            return ParsedData.Empty;
+        }
+
+        var normalizedRows = rows
+            .Select(row => PadRow(row, columnCount).ToArray())
+            .ToList();
+
+        IReadOnlyList<string> headers;
+        List<string[]> dataRows;
+
+        if (treatFirstRowAsHeader && normalizedRows.Count > 0)
+        {
+            headers = NormalizeHeaders(normalizedRows.First());
+            dataRows = normalizedRows.Skip(1).ToList();
+        }
+        else
+        {
+            headers = GenerateHeaders(columnCount);
+            dataRows = normalizedRows;
+        }
+
+        return new ParsedData(headers, dataRows);
+    }
+
+    private IReadOnlyList<string> NormalizeHeaders(string[] headerRow)
+    {
+        var headers = new List<string>(headerRow.Length);
+        for (var i = 0; i < headerRow.Length; i++)
+        {
+            headers.Add(string.IsNullOrWhiteSpace(headerRow[i]) ? $"Column{i + 1}" : headerRow[i]);
+        }
+
+        return headers;
+    }
+
+    private IReadOnlyList<string> GenerateHeaders(int count) =>
+        Enumerable.Range(1, count).Select(i => $"Column{i}").ToList();
+
+    private string BuildMarkdown()
+    {
+        var headers = Headers;
+        if (headers.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("| " + string.Join(" | ", headers) + " |");
+        sb.AppendLine("| " + string.Join(" | ", headers.Select(_ => "---")) + " |");
+
+        foreach (var row in DataRows)
+        {
+            var padded = PadRow(row, headers.Count);
+            sb.AppendLine("| " + string.Join(" | ", padded) + " |");
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private string BuildSqlInsert()
+    {
+        var headers = Headers;
+        if (headers.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        if (!DataRows.Any())
+        {
+            return "-- No rows to insert.";
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine($"INSERT INTO {TableName}");
+        sb.AppendLine("(");
+        sb.AppendLine("    " + string.Join(",\n    ", headers.Select(h => $"[{h}]")));
+        sb.AppendLine(")");
+        sb.AppendLine("VALUES");
+
+        var valueLines = new List<string>();
+        foreach (var row in DataRows)
+        {
+            var padded = PadRow(row, headers.Count);
+            var literals = padded.Select(FormatSqlLiteral).ToArray();
+            valueLines.Add("    (" + string.Join(", ", literals) + ")");
+        }
+
+        sb.AppendLine(string.Join(",\n", valueLines));
+        sb.Append(";");
+        return sb.ToString();
+    }
+
+    private string BuildJson()
+    {
+        var headers = Headers;
+        if (headers.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var objects = new List<Dictionary<string, object?>>(DataRows.Count);
+        foreach (var row in DataRows)
+        {
+            var padded = PadRow(row, headers.Count).ToList();
+            var payload = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < headers.Count; i++)
+            {
+                payload[headers[i]] = CoerceJsonValue(padded[i]);
+            }
+
+            objects.Add(payload);
+        }
+
+        return JsonSerializer.Serialize(objects, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    private string BuildCsv()
+    {
+        var headers = Headers;
+        if (headers.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine(string.Join(",", headers.Select(EscapeCsvCell)));
+
+        foreach (var row in DataRows)
+        {
+            var padded = PadRow(row, headers.Count);
+            sb.AppendLine(string.Join(",", padded.Select(EscapeCsvCell)));
+        }
+
+        return sb.ToString().TrimEnd();
+    }
+
+    private char DetermineDelimiter()
+    {
+        return SelectedDelimiter switch
+        {
+            "Tab" => '\t',
+            "Comma" => ',',
+            "Semicolon" => ';',
+            "Pipe" => '|',
+            _ => DetectDelimiterFromContent()
+        };
+    }
+
+    private char DetectDelimiterFromContent()
+    {
+        var sample = RawInput.Split('\n').Take(5).ToArray();
+        var candidates = new[] { '\t', ',', ';', '|' };
+        var scored = candidates.Select(candidate =>
+        {
+            var score = sample.Sum(line => line.Count(ch => ch == candidate));
+            return (candidate, score);
+        }).OrderByDescending(tuple => tuple.score).ToList();
+
+        var best = scored.FirstOrDefault(tuple => tuple.score > 0);
+        return best.score > 0 ? best.candidate : '\t';
+    }
+
+    private object? CoerceJsonValue(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        if (bool.TryParse(value, out var boolValue))
+        {
+            return boolValue;
+        }
+
+        if (long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var longValue))
+        {
+            return longValue;
+        }
+
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var doubleValue))
+        {
+            return doubleValue;
+        }
+
+        return value;
+    }
+
+    private string FormatSqlLiteral(string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return "NULL";
+        }
+
+        if (!QuoteStringValues)
+        {
+            return value;
+        }
+
+        if (bool.TryParse(value, out var boolValue))
+        {
+            return boolValue ? "1" : "0";
+        }
+
+        if (double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out _))
+        {
+            return value;
+        }
+
+        return "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";
+    }
+
+    private string JsonElementToCell(JsonElement element)
+    {
+        return element.ValueKind switch
+        {
+            JsonValueKind.String => TrimCells
+                ? element.GetString()?.Trim() ?? string.Empty
+                : element.GetString() ?? string.Empty,
+            JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False => element.GetRawText(),
+            JsonValueKind.Null => string.Empty,
+            _ => element.GetRawText()
+        };
+    }
+
+    private static string EscapeCsvCell(string value)
+    {
+        if (value is null)
+        {
+            return string.Empty;
+        }
+
+        var needsQuotes = value.Contains(',', StringComparison.Ordinal) ||
+                          value.Contains('"', StringComparison.Ordinal) ||
+                          value.Contains('\n', StringComparison.Ordinal) ||
+                          value.Contains('\r', StringComparison.Ordinal);
+
+        if (!needsQuotes)
+        {
+            return value;
+        }
+
+        return "\"" + value.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
+    }
+
+    private IEnumerable<string> PadRow(string[] row, int width)
+    {
+        for (var i = 0; i < width; i++)
+        {
+            if (i < row.Length)
+            {
+                yield return row[i];
+            }
+            else
+            {
+                yield return string.Empty;
+            }
+        }
+    }
+
+    private sealed record ParsedData(IReadOnlyList<string> Headers, IReadOnlyList<string[]> Rows)
+    {
+        public static ParsedData Empty { get; } = new ParsedData(Array.Empty<string>(), Array.Empty<string[]>());
+    }
+}

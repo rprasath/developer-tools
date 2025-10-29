@@ -4,6 +4,8 @@
 @using System.Text.Json
 @using System.Globalization
 @using System.Linq
+@using System.Security.Cryptography
+@using System.Collections.Generic
 
 <div class="max-w-screen-xl mx-auto space-y-8">
     <div>
@@ -16,7 +18,9 @@
 
     <div class="bg-white rounded-lg shadow-md p-6 space-y-4">
         <label class="block text-sm font-medium text-gray-700" for="jwt-input">Paste a JWT</label>
-        <textarea id="jwt-input" @bind="jwtInput" class="w-full h-40 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+        <textarea id="jwt-input"
+                  @bind="jwtInput"
+                  class="w-full h-40 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                   placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."></textarea>
         <div class="flex flex-wrap gap-3">
             <button class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors" @onclick="DecodeJwt">
@@ -25,11 +29,66 @@
             <button class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors" @onclick="ClearAll">
                 Clear
             </button>
+            <button class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors" @onclick="LoadSampleToken">
+                Load sample token
+            </button>
         </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1" for="jwt-secret">Verification secret (optional)</label>
+                <div class="relative">
+                    <input id="jwt-secret"
+                           type="@(showSecret ? "text" : "password")"
+                           @bind="verificationSecret"
+                           @bind:event="oninput"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm font-mono"
+                           placeholder="Shared secret for HS256/HS384/HS512 tokens" />
+                    <button type="button"
+                            class="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
+                            @onclick="ToggleSecretVisibility"
+                            title="Toggle visibility">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+            <div class="text-xs text-gray-500 md:flex md:items-center">
+                Provide the shared secret to validate HMAC signatures. Other algorithms require public keys and are not supported in-browser.
+            </div>
+        </div>
+
         <p class="text-xs text-gray-500">
             Tokens are decoded entirely in your browser. Secrets never leave this page.
         </p>
     </div>
+
+    @if (decodeError is null && (tokenStatus != TokenStatus.Unavailable || signatureVerification.State != SignatureVerificationState.NotRequested))
+    {
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            @if (tokenStatus != TokenStatus.Unavailable)
+            {
+                var style = GetTokenStatusStyle(tokenStatus);
+                <div class="@($"rounded-md border-l-4 {style.BorderClass} {style.BackgroundClass} p-4")">
+                    <h3 class="@($"text-sm font-semibold {style.TextClass}")">@style.Title</h3>
+                    @if (!string.IsNullOrWhiteSpace(tokenLifetimeSummary))
+                    {
+                        <p class="@($"text-sm mt-1 {style.TextClass}")">@tokenLifetimeSummary</p>
+                    }
+                </div>
+            }
+            @if (signatureVerification.State != SignatureVerificationState.NotRequested)
+            {
+                var style = GetSignatureStatusStyle(signatureVerification.State);
+                <div class="@($"rounded-md border-l-4 {style.BorderClass} {style.BackgroundClass} p-4")">
+                    <h3 class="@($"text-sm font-semibold {style.TextClass}")">@style.Title</h3>
+                    <p class="@($"text-sm mt-1 {style.TextClass}")">@signatureVerification.Message</p>
+                </div>
+            }
+        </div>
+    }
 
     @if (!string.IsNullOrWhiteSpace(decodeError))
     {
@@ -163,6 +222,11 @@
     private string? subjectClaim;
     private string? audienceClaim;
     private string? issuerClaim;
+    private string? verificationSecret;
+    private bool showSecret;
+    private SignatureVerificationResult signatureVerification = SignatureVerificationResult.NotRequested();
+    private TokenStatus tokenStatus = TokenStatus.Unavailable;
+    private string? tokenLifetimeSummary;
 
     private void DecodeJwt()
     {
@@ -178,6 +242,9 @@
         subjectClaim = null;
         audienceClaim = null;
         issuerClaim = null;
+        signatureVerification = SignatureVerificationResult.NotRequested();
+        tokenStatus = TokenStatus.Unavailable;
+        tokenLifetimeSummary = null;
 
         if (string.IsNullOrWhiteSpace(jwtInput))
         {
@@ -194,12 +261,17 @@
 
         try
         {
+            var signingInput = $"{parts[0]}.{parts[1]}";
             headerJson = FormatJson(Base64UrlDecode(parts[0]));
             payloadJson = FormatJson(Base64UrlDecode(parts[1]));
             signature = parts.Length > 2 ? parts[2] : string.Empty;
 
             headerClaims = ParseClaims(headerJson);
             payloadClaims = ParseClaims(payloadJson);
+
+            var algorithm = headerClaims is not null && headerClaims.TryGetValue("alg", out var algValue)
+                ? algValue
+                : null;
 
             if (payloadClaims is not null)
             {
@@ -208,17 +280,35 @@
                 payloadClaims.Remove("iat");
             }
 
+            DateTimeOffset? issuedAt = null;
+            DateTimeOffset? expiresAt = null;
+            DateTimeOffset? notBefore = null;
+
             if (!string.IsNullOrWhiteSpace(payloadJson))
             {
                 using var payloadDoc = JsonDocument.Parse(payloadJson);
                 var root = payloadDoc.RootElement;
-                issuedAtSummary = GetTimeClaim(root, "iat");
-                expiresAtSummary = GetTimeClaim(root, "exp");
-                notBeforeSummary = GetTimeClaim(root, "nbf");
+                issuedAt = GetUnixTime(root, "iat");
+                expiresAt = GetUnixTime(root, "exp");
+                notBefore = GetUnixTime(root, "nbf");
+
+                issuedAtSummary = FormatInstant(issuedAt);
+                expiresAtSummary = FormatInstant(expiresAt);
+                notBeforeSummary = FormatInstant(notBefore);
                 subjectClaim = TryGetString(root, "sub");
                 issuerClaim = TryGetString(root, "iss");
                 audienceClaim = ExtractAudience(root);
+
+                tokenStatus = DetermineTokenStatus(notBefore, expiresAt);
+                tokenLifetimeSummary = BuildLifetimeSummary(tokenStatus, notBefore, expiresAt, issuedAt);
             }
+            else
+            {
+                tokenStatus = TokenStatus.Unavailable;
+                tokenLifetimeSummary = null;
+            }
+
+            signatureVerification = EvaluateSignature(algorithm, signingInput, signature);
         }
         catch (Exception ex)
         {
@@ -241,9 +331,108 @@
         subjectClaim = null;
         audienceClaim = null;
         issuerClaim = null;
+        signatureVerification = SignatureVerificationResult.NotRequested();
+        tokenStatus = TokenStatus.Unavailable;
+        tokenLifetimeSummary = null;
     }
 
+    private void ToggleSecretVisibility()
+    {
+        showSecret = !showSecret;
+    }
+
+    private void LoadSampleToken()
+    {
+        jwtInput = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyLTEyMyIsIm5hbWUiOiJDYXNleSBFeGFtcGxlIiwicm9sZSI6ImFkbWluIiwiaXNzIjoiaHR0cHM6Ly9jb250b3NvLmV4YW1wbGUiLCJhdWQiOlsiYXBpIiwibW9iaWxlIl0sImlhdCI6MTc3OTk5NjQwMCwibmJmIjoxNzc5OTk2NDAwLCJleHAiOjE3ODAwMDAwMDB9.Ol7RitLH1kg6wY6jdtZxJgSdWhnvhsYEZf9fqwk76s8";
+        verificationSecret = "super-secret";
+        DecodeJwt();
+    }
+
+    private SignatureVerificationResult EvaluateSignature(string? algorithm, string signingInput, string? signatureSegment)
+    {
+        if (string.IsNullOrWhiteSpace(signatureSegment))
+        {
+            return SignatureVerificationResult.NotApplicable("Token does not include a signature segment.");
+        }
+
+        if (string.Equals(algorithm, "none", StringComparison.OrdinalIgnoreCase))
+        {
+            return SignatureVerificationResult.NotApplicable("Algorithm 'none' does not produce a signature.");
+        }
+
+        if (!SupportsHmac(algorithm))
+        {
+            return SignatureVerificationResult.Unsupported("Signature verification for this algorithm requires external keys and is not supported offline.");
+        }
+
+        var trimmedSecret = verificationSecret?.Trim();
+        if (string.IsNullOrEmpty(trimmedSecret))
+        {
+            return SignatureVerificationResult.SecretRequired("Provide the shared secret to verify the HMAC signature.");
+        }
+
+        return VerifyHmacSignature(algorithm!, trimmedSecret, signingInput, signatureSegment);
+    }
+
+    private SignatureVerificationResult VerifyHmacSignature(string algorithm, string secret, string signingInput, string signatureSegment)
+    {
+        try
+        {
+            var provided = Base64UrlDecodeToBytes(signatureSegment);
+            var expected = ComputeHmac(algorithm, secret, signingInput);
+            return ConstantTimeEquals(expected, provided)
+                ? SignatureVerificationResult.Valid("Signature matches the supplied secret.")
+                : SignatureVerificationResult.Invalid("Signature does not match the supplied secret.");
+        }
+        catch (NotSupportedException)
+        {
+            return SignatureVerificationResult.Unsupported($"Verification for '{algorithm}' tokens is not available.");
+        }
+        catch (FormatException)
+        {
+            return SignatureVerificationResult.Invalid("Signature segment is not valid Base64Url.");
+        }
+    }
+
+    private static byte[] ComputeHmac(string algorithm, string secret, string signingInput)
+    {
+        var key = Encoding.UTF8.GetBytes(secret);
+        using HMAC hmac = algorithm switch
+        {
+            "HS256" => new HMACSHA256(key),
+            "HS384" => new HMACSHA384(key),
+            "HS512" => new HMACSHA512(key),
+            _ => throw new NotSupportedException()
+        };
+        return hmac.ComputeHash(Encoding.UTF8.GetBytes(signingInput));
+    }
+
+    private static bool ConstantTimeEquals(byte[] left, byte[] right)
+    {
+        if (left.Length != right.Length)
+        {
+            return false;
+        }
+
+        var diff = 0;
+        for (var i = 0; i < left.Length; i++)
+        {
+            diff |= left[i] ^ right[i];
+        }
+
+        return diff == 0;
+    }
+
+    private static bool SupportsHmac(string? algorithm) =>
+        algorithm is "HS256" or "HS384" or "HS512";
+
     private static string Base64UrlDecode(string input)
+    {
+        var bytes = Base64UrlDecodeToBytes(input);
+        return Encoding.UTF8.GetString(bytes);
+    }
+
+    private static byte[] Base64UrlDecodeToBytes(string input)
     {
         var sanitized = input.Replace('-', '+').Replace('_', '/');
         switch (sanitized.Length % 4)
@@ -256,8 +445,7 @@
                 break;
         }
 
-        var bytes = Convert.FromBase64String(sanitized);
-        return Encoding.UTF8.GetString(bytes);
+        return Convert.FromBase64String(sanitized);
     }
 
     private static string FormatJson(string json)
@@ -308,22 +496,31 @@
         };
     }
 
-    private static string? GetTimeClaim(JsonElement root, string propertyName)
+    private static DateTimeOffset? GetUnixTime(JsonElement root, string propertyName)
     {
-        if (!root.TryGetProperty(propertyName, out var element))
+        if (!root.TryGetProperty(propertyName, out var element) || element.ValueKind != JsonValueKind.Number)
         {
             return null;
         }
 
-        if (!element.TryGetInt64(out var unix))
-        {
-            return null;
-        }
-
-        var dto = DateTimeOffset.FromUnixTimeSeconds(unix);
-        var relative = BuildRelative(dto);
-        return $"{dto.ToUniversalTime():yyyy-MM-dd HH:mm:ss 'UTC'} ({relative})";
+        return element.TryGetInt64(out var unix)
+            ? DateTimeOffset.FromUnixTimeSeconds(unix)
+            : null;
     }
+
+    private static string? FormatInstant(DateTimeOffset? instant)
+    {
+        if (instant is null)
+        {
+            return null;
+        }
+
+        var dto = instant.Value.ToUniversalTime();
+        return $"{dto:yyyy-MM-dd HH:mm:ss 'UTC'} ({BuildRelative(dto)})";
+    }
+
+    private static string? GetTimeClaim(JsonElement root, string propertyName) =>
+        FormatInstant(GetUnixTime(root, propertyName));
 
     private static string BuildRelative(DateTimeOffset dto)
     {
@@ -360,6 +557,67 @@
             : $"{rounded} {unit}s {direction}";
     }
 
+    private static TokenStatus DetermineTokenStatus(DateTimeOffset? notBefore, DateTimeOffset? expires)
+    {
+        var now = DateTimeOffset.UtcNow;
+        if (notBefore.HasValue && now < notBefore.Value)
+        {
+            return TokenStatus.NotYetValid;
+        }
+
+        if (expires.HasValue && now >= expires.Value)
+        {
+            return TokenStatus.Expired;
+        }
+
+        if (notBefore.HasValue || expires.HasValue)
+        {
+            return TokenStatus.Valid;
+        }
+
+        return TokenStatus.Unavailable;
+    }
+
+    private static string? BuildLifetimeSummary(TokenStatus status, DateTimeOffset? notBefore, DateTimeOffset? expires, DateTimeOffset? issuedAt)
+    {
+        return status switch
+        {
+            TokenStatus.Valid => BuildValidLifetimeSummary(notBefore, expires, issuedAt),
+            TokenStatus.NotYetValid => notBefore.HasValue
+                ? $"Token becomes valid at {FormatInstant(notBefore)}."
+                : "Token is not yet valid.",
+            TokenStatus.Expired => expires.HasValue
+                ? $"Token expired at {FormatInstant(expires)}."
+                : "Token has expired.",
+            _ => null
+        };
+    }
+
+    private static string BuildValidLifetimeSummary(DateTimeOffset? notBefore, DateTimeOffset? expires, DateTimeOffset? issuedAt)
+    {
+        var sections = new List<string>();
+        var validFrom = FormatInstant(notBefore);
+        if (!string.IsNullOrWhiteSpace(validFrom))
+        {
+            sections.Add($"Valid from {validFrom}");
+        }
+        else
+        {
+            var issued = FormatInstant(issuedAt);
+            if (!string.IsNullOrWhiteSpace(issued))
+            {
+                sections.Add($"Issued {issued}");
+            }
+        }
+
+        var expiresText = FormatInstant(expires);
+        sections.Add(!string.IsNullOrWhiteSpace(expiresText)
+            ? $"Expires {expiresText}"
+            : "No expiry claim present");
+
+        return string.Join(". ", sections);
+    }
+
     private static string? TryGetString(JsonElement root, string propertyName)
     {
         return root.TryGetProperty(propertyName, out var element) && element.ValueKind == JsonValueKind.String
@@ -382,6 +640,24 @@
         };
     }
 
+    private static StatusStyle GetTokenStatusStyle(TokenStatus status) => status switch
+    {
+        TokenStatus.Valid => new StatusStyle("border-green-300", "bg-green-50", "text-green-800", "Token is active"),
+        TokenStatus.Expired => new StatusStyle("border-red-300", "bg-red-50", "text-red-800", "Token has expired"),
+        TokenStatus.NotYetValid => new StatusStyle("border-amber-300", "bg-amber-50", "text-amber-800", "Token is not yet valid"),
+        _ => new StatusStyle("border-gray-300", "bg-gray-50", "text-gray-700", "Token status unavailable")
+    };
+
+    private static StatusStyle GetSignatureStatusStyle(SignatureVerificationState state) => state switch
+    {
+        SignatureVerificationState.Valid => new StatusStyle("border-green-300", "bg-green-50", "text-green-800", "Signature verified"),
+        SignatureVerificationState.Invalid => new StatusStyle("border-red-300", "bg-red-50", "text-red-800", "Signature invalid"),
+        SignatureVerificationState.SecretRequired => new StatusStyle("border-amber-300", "bg-amber-50", "text-amber-800", "Secret required"),
+        SignatureVerificationState.Unsupported => new StatusStyle("border-gray-300", "bg-gray-50", "text-gray-700", "Verification not supported"),
+        SignatureVerificationState.NotApplicable => new StatusStyle("border-gray-300", "bg-gray-50", "text-gray-700", "No signature to verify"),
+        _ => new StatusStyle("border-gray-200", "bg-gray-50", "text-gray-600", "Signature not checked")
+    };
+
     private Task CopyHeaderAsync() => CopyAsync(headerJson, "copy-header");
 
     private Task CopyPayloadAsync() => CopyAsync(payloadJson, "copy-payload");
@@ -394,5 +670,35 @@
         {
             await JSRuntime.InvokeVoidAsync("copyToClipboard", value, buttonId);
         }
+    }
+
+    private readonly record struct SignatureVerificationResult(SignatureVerificationState State, string Message)
+    {
+        public static SignatureVerificationResult NotRequested() => new(SignatureVerificationState.NotRequested, string.Empty);
+        public static SignatureVerificationResult NotApplicable(string message) => new(SignatureVerificationState.NotApplicable, message);
+        public static SignatureVerificationResult Valid(string message) => new(SignatureVerificationState.Valid, message);
+        public static SignatureVerificationResult Invalid(string message) => new(SignatureVerificationState.Invalid, message);
+        public static SignatureVerificationResult Unsupported(string message) => new(SignatureVerificationState.Unsupported, message);
+        public static SignatureVerificationResult SecretRequired(string message) => new(SignatureVerificationState.SecretRequired, message);
+    }
+
+    private record StatusStyle(string BorderClass, string BackgroundClass, string TextClass, string Title);
+
+    private enum SignatureVerificationState
+    {
+        NotRequested,
+        Valid,
+        Invalid,
+        SecretRequired,
+        Unsupported,
+        NotApplicable
+    }
+
+    private enum TokenStatus
+    {
+        Unavailable,
+        Valid,
+        Expired,
+        NotYetValid
     }
 }

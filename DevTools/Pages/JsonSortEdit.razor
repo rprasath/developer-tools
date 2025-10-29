@@ -1,140 +1,645 @@
-﻿@page "/jsoneditsort"
-@using Newtonsoft.Json.Linq;
-@using Newtonsoft.Json;
-@using System.Text;
+@page "/jsoneditsort"
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+@using Newtonsoft.Json
+@using Newtonsoft.Json.Linq
 @inject IJSRuntime JSRuntime
 
-<div class="max-w-screen-xl mx-auto">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">JSON Edit/Sort</h1>
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">JSON Refiner</h1>
+        <p class="text-gray-600 mt-2">
+            Sort arrays, prune fields, and tidy JSON payloads in a few clicks. Nothing leaves your browser—perfect for
+            redacting sensitive samples before sharing.
+        </p>
+    </div>
 
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="p-6">
-            <!-- Input Area -->
-            <div class="mb-6">
-                <label for="inputTxt" class="text-sm font-medium text-gray-700 mb-2 block">Input JSON</label>
-                <textarea @bind="Input1" class="w-full h-48 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" id="inputTxt"></textarea>
+        <div class="p-6 space-y-6">
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <div class="space-y-3">
+                    <label for="inputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Input</label>
+                    <textarea @bind="InputText"
+                              class="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                              id="inputTxt"
+                              placeholder="Paste a JSON array or object, then configure the options on the right."></textarea>
+                    <div class="flex flex-wrap gap-2 text-xs">
+                        <button @onclick="LoadSample"
+                                class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                            Sample payload
+                        </button>
+                        <button @onclick="ClearAll"
+                                class="px-3 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                            Clear
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="sort-prop">
+                                Sort by property
+                            </label>
+                            <input id="sort-prop"
+                                   type="text"
+                                   @bind="SortProperty"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                   placeholder="e.g. data.createdAt" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="exclude-props">
+                                Remove fields
+                            </label>
+                            <input id="exclude-props"
+                                   type="text"
+                                   @bind="ExcludeProperties"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                   placeholder="comma,separated,fields" />
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="include-props">
+                                Keep only fields
+                            </label>
+                            <input id="include-props"
+                                   type="text"
+                                   @bind="IncludeProperties"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                                   placeholder="optional,list,of,fields" />
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-gray-700">
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="CaseInsensitiveSort" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Case-insensitive sort
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="SortDescending" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Sort descending
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="RemoveNullFields" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Remove null fields
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="RemoveEmptyStrings" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Remove empty strings
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="RemoveEmptyArrays" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Drop empty arrays
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="RemoveEmptyObjects" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Drop empty objects
+                        </label>
+                    </div>
+
+                    <div class="flex flex-wrap gap-3 items-center">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="output-style">
+                                Output style
+                            </label>
+                            <select id="output-style"
+                                    @bind="OutputStylePreference"
+                                    class="border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm">
+                                <option value="@JsonOutputStyle.Pretty">Indented</option>
+                                <option value="@JsonOutputStyle.Minified">Minified</option>
+                            </select>
+                        </div>
+                        <button @onclick="ProcessJson"
+                                class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                            Process JSON
+                        </button>
+                        <button @onclick="FormatOnly"
+                                class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                            Format only
+                        </button>
+                        <button @onclick="ValidateOnly"
+                                class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                            Validate
+                        </button>
+                        <button @onclick="ResetOptions"
+                                class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                            Reset options
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Controls -->
-            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-6">
-                <div class="md:col-span-3">
-                    <label for="SortProp" class="text-sm font-medium text-gray-700 mb-2 block">Sort By</label>
-                    <input type="text" @bind="SortProp" class="w-full p-2 border border-gray-300 rounded-md" name="SortProp" id="SortProp" />
+            @if (!string.IsNullOrWhiteSpace(ProcessError))
+            {
+                <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3">
+                    @ProcessError
                 </div>
-                <div class="md:col-span-7">
-                    <label for="ExcludeProps" class="text-sm font-medium text-gray-700 mb-2 block">Exclude Fields (Comma separated)</label>
-                    <input type="text" @bind="ExcludeProps" class="w-full p-2 border border-gray-300 rounded-md" name="ExcludeProps" id="ExcludeProps" />
+            }
+            else if (!string.IsNullOrWhiteSpace(ProcessMessage))
+            {
+                <div class="rounded-md bg-green-50 border border-green-200 text-green-700 text-sm px-4 py-3">
+                    @ProcessMessage
                 </div>
-                <div class="md:col-span-2 flex items-end">
-                    <button @onclick="RemoveAndSort" class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                        Run
-                    </button>
-                </div>
-            </div>
+            }
+        </div>
 
-            <!-- Output Area -->
-            <div class="relative">
-                <label for="outputTxt" class="text-sm font-medium text-gray-700 mb-2 block">Output JSON</label>
-                <textarea @bind="Output" class="w-full h-48 p-3 border border-gray-300 rounded-md bg-gray-50" id="outputTxt" readonly></textarea>
-                <button @onclick="CopyOutputToClipboard" 
-                        id="copy-json-output-btn" 
-                        class="absolute right-2 top-10 text-gray-500 hover:text-gray-700 focus:outline-none"
-                        title="Copy to clipboard">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+        <div class="border-t border-gray-200 bg-gray-50 px-6 py-6 space-y-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Output</h2>
+                    @if (Summary is not null)
+                    {
+                        <p class="text-xs text-gray-500">
+                            Arrays: @Summary.ArrayCount • Objects: @Summary.ObjectCount • Fields removed: @Summary.FieldsRemoved • Nulls removed: @Summary.NullsRemoved • Items dropped: @Summary.ItemsRemoved
+                        </p>
+                    }
+                </div>
+                <button @onclick="CopyOutput"
+                        id="copy-json-output-btn"
+                        class="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors">
+                    Copy
                 </button>
             </div>
+            <textarea class="w-full h-64 p-3 border border-gray-300 rounded-md bg-white font-mono text-sm"
+                      readonly>@Output</textarea>
         </div>
     </div>
 </div>
 
 @code {
-    public string? Input1 { get; set; }
-    public string? SortProp { get; set; }
-    public string? ExcludeProps { get; set; }
-    public string? Output { get; set; }
+    private string? InputText { get; set; }
+    private string? SortProperty { get; set; }
+    private string? ExcludeProperties { get; set; }
+    private string? IncludeProperties { get; set; }
+    private bool CaseInsensitiveSort { get; set; } = true;
+    private bool SortDescending { get; set; }
+    private bool RemoveNullFields { get; set; }
+    private bool RemoveEmptyStrings { get; set; }
+    private bool RemoveEmptyArrays { get; set; }
+    private bool RemoveEmptyObjects { get; set; }
+    private JsonOutputStyle OutputStylePreference { get; set; } = JsonOutputStyle.Pretty;
 
-    private void RemoveAndSort()
+    private string? Output { get; set; }
+    private string? ProcessMessage { get; set; }
+    private string? ProcessError { get; set; }
+    private JsonProcessSummary? Summary { get; set; }
+
+    private void ProcessJson()
     {
-        if (string.IsNullOrWhiteSpace(Input1))
+        if (!TryParseInput(out var root))
         {
             return;
         }
 
-        var parsedInput = JToken.Parse(Input1);
+        var metrics = new JsonProcessMetrics();
+        var transformed = TransformNode(root, metrics);
+        if (transformed is null)
+        {
+            ProcessError = "The transformation removed the entire payload. Adjust the options and try again.";
+            Output = string.Empty;
+            Summary = null;
+            return;
+        }
 
-        Output = RemoveAndSortInternal(parsedInput)?.ToString(Formatting.Indented);
+        FinalizeOutput(transformed, metrics, "JSON processed successfully.");
     }
 
-    private JArray RemoveAndSortInternal(JToken parsedInput)
+    private void FormatOnly()
     {
-        var sortedInput = Sort(parsedInput);
-
-        var excludePropArray = ExcludeProps?.Split(',', StringSplitOptions.RemoveEmptyEntries) ?? new string[0];
-
-        if (excludePropArray.Any())
+        if (!TryParseInput(out var root))
         {
-            JArray updated = new();
-            foreach (var item in sortedInput)
+            return;
+        }
+
+        var metrics = new JsonProcessMetrics();
+        CountTokens(root, metrics);
+        FinalizeOutput(root, metrics, "JSON formatted.");
+    }
+
+    private void ValidateOnly()
+    {
+        if (!TryParseInput(out var root))
+        {
+            return;
+        }
+
+        ProcessMessage = root.Type switch
+        {
+            JTokenType.Array => "Valid JSON array.",
+            JTokenType.Object => "Valid JSON object.",
+            _ => $"Valid JSON token ({root.Type})."
+        };
+        ProcessError = null;
+        var metrics = new JsonProcessMetrics();
+        CountTokens(root, metrics);
+        Summary = metrics.ToSummary();
+        Output = FormatToken(root);
+    }
+
+    private void FinalizeOutput(JToken token, JsonProcessMetrics metrics, string successMessage)
+    {
+        ProcessError = null;
+        ProcessMessage = successMessage;
+        Summary = metrics.ToSummary();
+        Output = FormatToken(token);
+    }
+
+    private void CountTokens(JToken token, JsonProcessMetrics metrics)
+    {
+        switch (token.Type)
+        {
+            case JTokenType.Array:
+                metrics.ArrayCount++;
+                foreach (var child in token.Children())
+                {
+                    CountTokens(child, metrics);
+                }
+                break;
+            case JTokenType.Object:
+                metrics.ObjectCount++;
+                foreach (var child in token.Children<JToken>())
+                {
+                    CountTokens(child, metrics);
+                }
+                break;
+            default:
+                foreach (var child in token.Children())
+                {
+                    CountTokens(child, metrics);
+                }
+                break;
+        }
+    }
+
+    private bool TryParseInput(out JToken root)
+    {
+        ProcessError = null;
+        ProcessMessage = null;
+        Summary = null;
+        Output = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(InputText))
+        {
+            ProcessError = "Paste JSON to get started.";
+            root = null!;
+            return false;
+        }
+
+        try
+        {
+            root = JToken.Parse(InputText);
+            return true;
+        }
+        catch (JsonReaderException ex)
+        {
+            ProcessError = $"Unable to parse JSON: {ex.Message}";
+            root = null!;
+            return false;
+        }
+    }
+
+    private JToken? TransformNode(JToken token, JsonProcessMetrics metrics)
+    {
+        switch (token.Type)
+        {
+            case JTokenType.Object:
+                metrics.ObjectCount++;
+                var workingObject = (JObject)token.DeepClone();
+                ApplyInclusionExclusion(workingObject, metrics);
+
+                foreach (var property in workingObject.Properties().ToList())
+                {
+                    var transformedChild = TransformNode(property.Value, metrics);
+                    if (transformedChild is null)
+                    {
+                        property.Remove();
+                        metrics.FieldsRemoved++;
+                    }
+                    else
+                    {
+                        property.Value = transformedChild;
+                    }
+                }
+
+                if (RemoveNullFields)
+                {
+                    foreach (var prop in workingObject.Properties().Where(p => p.Value.Type == JTokenType.Null).ToList())
+                    {
+                        prop.Remove();
+                        metrics.FieldsRemoved++;
+                        metrics.NullsRemoved++;
+                    }
+                }
+
+                if (RemoveEmptyStrings)
+                {
+                    foreach (var prop in workingObject.Properties().Where(p => p.Value.Type == JTokenType.String && string.IsNullOrWhiteSpace(p.Value.Value<string>())).ToList())
+                    {
+                        prop.Remove();
+                        metrics.FieldsRemoved++;
+                    }
+                }
+
+                if (RemoveEmptyArrays)
+                {
+                    foreach (var prop in workingObject.Properties().Where(p => p.Value is JArray arr && !arr.HasValues).ToList())
+                    {
+                        prop.Remove();
+                        metrics.FieldsRemoved++;
+                    }
+                }
+
+                if (RemoveEmptyObjects)
+                {
+                    foreach (var prop in workingObject.Properties().Where(p => p.Value is JObject obj && !obj.HasValues).ToList())
+                    {
+                        prop.Remove();
+                        metrics.FieldsRemoved++;
+                    }
+                }
+
+                return workingObject;
+
+            case JTokenType.Array:
+                metrics.ArrayCount++;
+                var workingArray = new JArray();
+                foreach (var child in token.Children())
+                {
+                    var transformedChild = TransformNode(child, metrics);
+                    if (transformedChild is null)
+                    {
+                        metrics.ItemsRemoved++;
+                        continue;
+                    }
+
+                    if (RemoveEmptyObjects && transformedChild.Type == JTokenType.Object && !transformedChild.HasValues)
+                    {
+                        metrics.ItemsRemoved++;
+                        continue;
+                    }
+
+                    if (RemoveEmptyArrays && transformedChild.Type == JTokenType.Array && !transformedChild.HasValues)
+                    {
+                        metrics.ItemsRemoved++;
+                        continue;
+                    }
+
+                    workingArray.Add(transformedChild);
+                }
+
+                workingArray = SortArray(workingArray);
+                return workingArray;
+
+            default:
+                return token.DeepClone();
+        }
+    }
+
+    private void ApplyInclusionExclusion(JObject obj, JsonProcessMetrics metrics)
+    {
+        var comparer = StringComparer.OrdinalIgnoreCase;
+        var includes = ParseList(IncludeProperties);
+        var excludes = ParseList(ExcludeProperties);
+
+        if (includes?.Count > 0)
+        {
+            foreach (var property in obj.Properties().Where(p => !includes.Contains(p.Name, comparer)).ToList())
             {
-                updated.Add(RemoveFields(item, excludePropArray));
+                property.Remove();
+                metrics.FieldsRemoved++;
             }
+        }
 
-            return updated;
-        }
-        else
+        if (excludes?.Count > 0)
         {
-            return sortedInput;
-        }
-    }
-
-    private JArray Sort(JToken token)
-    {
-        if (token is JArray && SortProp != null)
-        {
-            var array = (JArray)token;
-            return new JArray(array.OrderBy(obj => obj[SortProp]?.ToString())); ;
-        }
-        else if (token is JArray)
-        {
-            return (JArray)token;
-        }
-        else
-        {
-            return new JArray() { token };
-        }
-    }
-
-    private JToken RemoveFields(JToken token, string[] fields)
-    {
-        JContainer? container = token as JContainer;
-        if (container == null) return token;
-
-        List<JToken> removeList = new List<JToken>();
-        foreach (JToken el in container.Children())
-        {
-            JProperty? p = el as JProperty;
-            if (p != null && fields.Contains(p.Name))
+            foreach (var property in obj.Properties().Where(p => excludes.Contains(p.Name, comparer)).ToList())
             {
-                removeList.Add(el);
+                property.Remove();
+                metrics.FieldsRemoved++;
             }
-            RemoveFields(el, fields);
         }
-
-        foreach (JToken el in removeList)
-        {
-            el.Remove();
-        }
-
-        return token;
     }
-    
-    private async Task CopyOutputToClipboard()
+
+    private JArray SortArray(JArray array)
+    {
+        if (string.IsNullOrWhiteSpace(SortProperty))
+        {
+            return array;
+        }
+
+        var comparer = new SortKeyComparer(SortDescending);
+        var ordered = array.Cast<JToken>().OrderBy(item => BuildSortKey(item), comparer).ToList();
+        return new JArray(ordered);
+    }
+
+    private SortKey BuildSortKey(JToken token)
+    {
+        if (token is not JObject obj)
+        {
+            return SortKey.Empty;
+        }
+
+        JToken? selected;
+        try
+        {
+            selected = obj.SelectToken(SortProperty!, errorWhenNoMatch: false);
+        }
+        catch (JsonException)
+        {
+            selected = null;
+        }
+
+        if (selected is null || selected.Type == JTokenType.Null || selected.Type == JTokenType.Undefined)
+        {
+            return SortKey.Empty;
+        }
+
+        if (decimal.TryParse(selected.ToString(), NumberStyles.Any, CultureInfo.InvariantCulture, out var numeric))
+        {
+            return SortKey.FromNumber(numeric);
+        }
+
+        if (selected.Type == JTokenType.Date)
+        {
+            var dt = selected.Value<DateTime>();
+            return SortKey.FromDate(dt);
+        }
+
+        var text = selected.Type == JTokenType.String ? selected.Value<string>() ?? string.Empty : selected.ToString();
+        text = CaseInsensitiveSort ? text.ToLowerInvariant() : text;
+        return SortKey.FromText(text);
+    }
+
+    private HashSet<string>? ParseList(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        return value.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(v => v.Trim())
+                    .Where(v => !string.IsNullOrEmpty(v))
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private string FormatToken(JToken token)
+    {
+        return OutputStylePreference == JsonOutputStyle.Pretty
+            ? token.ToString(Formatting.Indented)
+            : token.ToString(Formatting.None);
+    }
+
+    private async Task CopyOutput()
     {
         if (!string.IsNullOrEmpty(Output))
         {
             await JSRuntime.InvokeVoidAsync("copyToClipboard", Output, "copy-json-output-btn");
+            ProcessMessage = "Output copied to clipboard.";
+            ProcessError = null;
+        }
+        else
+        {
+            ProcessError = "Nothing to copy yet.";
+            ProcessMessage = null;
+        }
+    }
+
+    private void ResetOptions()
+    {
+        SortProperty = null;
+        ExcludeProperties = null;
+        IncludeProperties = null;
+        CaseInsensitiveSort = true;
+        SortDescending = false;
+        RemoveNullFields = false;
+        RemoveEmptyStrings = false;
+        RemoveEmptyArrays = false;
+        RemoveEmptyObjects = false;
+        OutputStylePreference = JsonOutputStyle.Pretty;
+        ProcessMessage = "Options reset to defaults.";
+        ProcessError = null;
+    }
+
+    private void LoadSample()
+    {
+        InputText = "[\n    { \"id\": 3, \"email\": \"alex@example.com\", \"lastSeen\": \"2024-02-13T18:22:00Z\", \"notes\": \"\" },\n    { \"id\": 1, \"email\": \"chris@example.com\", \"lastSeen\": null, \"notes\": \"Has beta access\" },\n    { \"id\": 2, \"email\": \"pat@example.com\", \"lastSeen\": \"2024-03-01T09:05:00Z\", \"notes\": null }\n]";
+        ProcessMessage = "Loaded sample data.";
+        ProcessError = null;
+    }
+
+    private void ClearAll()
+    {
+        InputText = string.Empty;
+        Output = string.Empty;
+        ProcessMessage = null;
+        ProcessError = null;
+        Summary = null;
+    }
+
+    private enum JsonOutputStyle
+    {
+        Pretty,
+        Minified
+    }
+
+    private sealed class JsonProcessMetrics
+    {
+        public int ArrayCount { get; set; }
+        public int ObjectCount { get; set; }
+        public int FieldsRemoved { get; set; }
+        public int NullsRemoved { get; set; }
+        public int ItemsRemoved { get; set; }
+
+        public JsonProcessSummary ToSummary() => new(ArrayCount, ObjectCount, FieldsRemoved, NullsRemoved, ItemsRemoved);
+    }
+
+    private sealed record JsonProcessSummary(int ArrayCount, int ObjectCount, int FieldsRemoved, int NullsRemoved, int ItemsRemoved);
+
+    private readonly struct SortKey
+    {
+        private SortKey(bool missing, decimal? number, long? ticks, string? text)
+        {
+            Missing = missing;
+            Number = number;
+            Ticks = ticks;
+            Text = text;
+        }
+
+        public bool Missing { get; }
+        public decimal? Number { get; }
+        public long? Ticks { get; }
+        public string? Text { get; }
+
+        public static SortKey Empty => new(true, null, null, null);
+        public static SortKey FromNumber(decimal number) => new(false, number, null, null);
+        public static SortKey FromDate(DateTime date) => new(false, null, date.ToUniversalTime().Ticks, null);
+        public static SortKey FromText(string text) => new(false, null, null, text);
+    }
+
+    private sealed class SortKeyComparer : IComparer<SortKey>
+    {
+        private readonly bool _descending;
+
+        public SortKeyComparer(bool descending)
+        {
+            _descending = descending;
+        }
+
+        public int Compare(SortKey x, SortKey y)
+        {
+            var result = CompareInternal(x, y);
+            return _descending ? -result : result;
+        }
+
+        private static int CompareInternal(SortKey x, SortKey y)
+        {
+            if (x.Missing && y.Missing)
+            {
+                return 0;
+            }
+
+            if (x.Missing)
+            {
+                return 1;
+            }
+
+            if (y.Missing)
+            {
+                return -1;
+            }
+
+            if (x.Number.HasValue && y.Number.HasValue)
+            {
+                return x.Number.Value.CompareTo(y.Number.Value);
+            }
+
+            if (x.Number.HasValue)
+            {
+                return -1;
+            }
+
+            if (y.Number.HasValue)
+            {
+                return 1;
+            }
+
+            if (x.Ticks.HasValue && y.Ticks.HasValue)
+            {
+                return x.Ticks.Value.CompareTo(y.Ticks.Value);
+            }
+
+            if (x.Ticks.HasValue)
+            {
+                return -1;
+            }
+
+            if (y.Ticks.HasValue)
+            {
+                return 1;
+            }
+
+            return string.Compare(x.Text, y.Text, StringComparison.Ordinal);
         }
     }
 }

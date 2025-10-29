@@ -1,0 +1,339 @@
+@page "/timezone"
+@using System.Globalization
+@using System.Linq
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Time Zone Converter</h1>
+        <p class="text-gray-600 mt-2">
+            Compare local times across popular zones without leaving the browser. Pick a source region, choose a target,
+            and see the converted instant alongside quick references for other hubs.
+        </p>
+    </div>
+
+    <section class="bg-white rounded-lg shadow-md overflow-hidden">
+        <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-gray-800">Convert between zones</h2>
+                <p class="text-xs text-gray-500">Handles daylight-saving shifts automatically.</p>
+            </div>
+            <button @onclick="UseCurrentInstant"
+                    class="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                Use current time
+            </button>
+        </header>
+
+        <div class="p-6 space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div>
+                    <label for="timezone-input" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1">
+                        Source date &amp; time
+                    </label>
+                    <input id="timezone-input"
+                           type="datetime-local"
+                           @bind="InputLocalTime"
+                           @bind:format="yyyy-MM-ddTHH:mm"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                </div>
+                <div>
+                    <label for="timezone-source" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1">
+                        Interpret as
+                    </label>
+                    <select id="timezone-source"
+                            @bind="SourceTimeZoneKey"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        @foreach (var option in TimeZoneOptions)
+                        {
+                            <option value="@option.Key">@option.DisplayName</option>
+                        }
+                    </select>
+                </div>
+                <div>
+                    <label for="timezone-target" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1">
+                        Convert to
+                    </label>
+                    <select id="timezone-target"
+                            @bind="TargetTimeZoneKey"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        @foreach (var option in TimeZoneOptions)
+                        {
+                            <option value="@option.Key">@option.DisplayName</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap gap-3">
+                <button @onclick="SwapZones"
+                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                    Swap zones
+                </button>
+                <button @onclick="ConvertTimeZones"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                    Convert
+                </button>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(ConversionError))
+            {
+                <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+                    @ConversionError
+                </div>
+            }
+            else if (Result is not null)
+            {
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                        <span class="block text-xs uppercase text-gray-500 font-semibold mb-1">Source</span>
+                        <h3 class="text-lg font-semibold text-gray-800">@Result.SourceDisplayName</h3>
+                        <p class="text-sm text-gray-600 mb-1">@Result.SourceTimeLabel</p>
+                        <p class="text-xs text-gray-500">Offset @Result.SourceOffsetLabel</p>
+                        @if (Result.SourceAmbiguous)
+                        {
+                            <p class="text-xs text-amber-600 mt-2">
+                                Ambiguous or two possible offsets because of daylight-saving transitions.
+                            </p>
+                        }
+                    </div>
+                    <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                        <span class="block text-xs uppercase text-blue-600 font-semibold mb-1">Target</span>
+                        <h3 class="text-lg font-semibold text-gray-900">@Result.TargetDisplayName</h3>
+                        <p class="text-sm text-gray-700 mb-1">@Result.TargetTimeLabel</p>
+                        <p class="text-xs text-gray-600">Offset @Result.TargetOffsetLabel</p>
+                        @if (Result.TargetAmbiguous)
+                        {
+                            <p class="text-xs text-amber-700 mt-2">
+                                Ambiguous result: this instant maps to two local times because of daylight-saving transitions.
+                            </p>
+                        }
+                    </div>
+                </div>
+
+                <div class="border border-gray-200 rounded-lg p-4 bg-white space-y-1 text-sm text-gray-700">
+                    <div><span class="font-semibold text-gray-800">UTC instant:</span> @Result.UtcLabel</div>
+                    <div><span class="font-semibold text-gray-800">Time difference:</span> @Result.DifferenceLabel</div>
+                </div>
+            }
+        </div>
+    </section>
+
+    @if (Result is not null && ComparisonSnapshots.Count != 0)
+    {
+        <section class="bg-white rounded-lg shadow-md overflow-hidden">
+            <header class="border-b border-gray-200 px-6 py-4">
+                <h2 class="text-lg font-semibold text-gray-800">Other popular zones</h2>
+                <p class="text-xs text-gray-500">Helpful when coordinating multi-region releases or incident bridges.</p>
+            </header>
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                @foreach (var snapshot in ComparisonSnapshots)
+                {
+                    <div class="@(snapshot.IsTarget ? "rounded-lg border p-4 space-y-1 border-blue-300 bg-blue-50" : "rounded-lg border p-4 space-y-1 border-gray-200 bg-gray-50")">
+                        <p class="text-sm font-semibold text-gray-800">@snapshot.DisplayName</p>
+                        <p class="text-lg font-bold text-gray-900">@snapshot.TimeLabel</p>
+                        <p class="text-xs text-gray-500">Offset @snapshot.OffsetLabel</p>
+                    </div>
+                }
+            </div>
+        </section>
+    }
+</div>
+
+@code {
+    private DateTime InputLocalTime { get; set; } = DateTime.UtcNow;
+    private string SourceTimeZoneKey { get; set; } = "UTC";
+    private string TargetTimeZoneKey { get; set; } = "USEastern";
+    private string? ConversionError { get; set; }
+    private ConversionResult? Result { get; set; }
+    private List<ZoneSnapshot> ComparisonSnapshots { get; set; } = new();
+
+    private readonly List<TimeZoneOption> TimeZoneOptions = new()
+    {
+        new("UTC", "UTC (Coordinated Universal Time)", "UTC", "Etc/UTC", "Coordinated Universal Time"),
+        new("USEastern", "US Eastern (New York / Toronto)", "Eastern Standard Time", "America/New_York"),
+        new("USCentral", "US Central (Chicago / Mexico City)", "Central Standard Time", "America/Chicago", "America/Mexico_City"),
+        new("USMountain", "US Mountain (Denver)", "Mountain Standard Time", "America/Denver"),
+        new("USPacific", "US Pacific (Los Angeles / Vancouver)", "Pacific Standard Time", "America/Los_Angeles"),
+        new("London", "UK (London)", "GMT Standard Time", "Europe/London"),
+        new("Berlin", "Central Europe (Berlin)", "W. Europe Standard Time", "Europe/Berlin"),
+        new("India", "India (Kolkata)", "India Standard Time", "Asia/Kolkata"),
+        new("Singapore", "Singapore / Hong Kong", "Singapore Standard Time", "Asia/Singapore", "Asia/Hong_Kong"),
+        new("Tokyo", "Japan (Tokyo)", "Tokyo Standard Time", "Asia/Tokyo"),
+        new("Sydney", "Australia (Sydney)", "AUS Eastern Standard Time", "Australia/Sydney"),
+        new("Auckland", "New Zealand (Auckland)", "New Zealand Standard Time", "Pacific/Auckland"),
+        new("UTCMinus3", "UTC-03 (São Paulo / Buenos Aires)", "E. South America Standard Time", "America/Sao_Paulo", "America/Buenos_Aires")
+    };
+
+    private void UseCurrentInstant()
+    {
+        InputLocalTime = DateTime.UtcNow;
+        ConvertTimeZones();
+    }
+
+    private void SwapZones()
+    {
+        (SourceTimeZoneKey, TargetTimeZoneKey) = (TargetTimeZoneKey, SourceTimeZoneKey);
+        ConvertTimeZones();
+    }
+
+    private void ConvertTimeZones()
+    {
+        ConversionError = null;
+        Result = null;
+        ComparisonSnapshots = new();
+
+        var sourceOption = TimeZoneOptions.FirstOrDefault(opt => opt.Key == SourceTimeZoneKey);
+        var targetOption = TimeZoneOptions.FirstOrDefault(opt => opt.Key == TargetTimeZoneKey);
+
+        if (sourceOption is null || targetOption is null)
+        {
+            ConversionError = "Select both a source and target time zone.";
+            return;
+        }
+
+        if (!TryResolveTimeZone(sourceOption, out var sourceZone))
+        {
+            ConversionError = $"Unable to resolve data for {sourceOption.DisplayName}.";
+            return;
+        }
+
+        if (!TryResolveTimeZone(targetOption, out var targetZone))
+        {
+            ConversionError = $"Unable to resolve data for {targetOption.DisplayName}.";
+            return;
+        }
+
+        var unspecified = DateTime.SpecifyKind(InputLocalTime, DateTimeKind.Unspecified);
+
+        if (sourceZone.IsInvalidTime(unspecified))
+        {
+            ConversionError = $"{sourceOption.DisplayName} skips that minute because of a daylight-saving adjustment.";
+            return;
+        }
+
+        var utcInstant = TimeZoneInfo.ConvertTimeToUtc(unspecified, sourceZone);
+        var sourceLocal = TimeZoneInfo.ConvertTimeFromUtc(utcInstant, sourceZone);
+        var targetLocal = TimeZoneInfo.ConvertTimeFromUtc(utcInstant, targetZone);
+        var sourceOffset = sourceZone.GetUtcOffset(utcInstant);
+        var targetOffset = targetZone.GetUtcOffset(utcInstant);
+
+        Result = new ConversionResult(
+            sourceOption.DisplayName,
+            targetOption.DisplayName,
+            FormatDateTime(sourceLocal),
+            FormatDateTime(targetLocal),
+            FormatOffset(sourceOffset),
+            FormatOffset(targetOffset),
+            FormatUtc(utcInstant),
+            FormatDifference(targetLocal - sourceLocal),
+            sourceZone.IsAmbiguousTime(unspecified),
+            targetZone.IsAmbiguousTime(targetLocal)
+        );
+
+        ComparisonSnapshots = BuildSnapshots(utcInstant, targetOption);
+    }
+
+    private List<ZoneSnapshot> BuildSnapshots(DateTime utcInstant, TimeZoneOption targetOption)
+    {
+        var snapshots = new List<ZoneSnapshot>();
+        foreach (var option in TimeZoneOptions)
+        {
+            if (!TryResolveTimeZone(option, out var zone))
+            {
+                continue;
+            }
+
+            var local = TimeZoneInfo.ConvertTimeFromUtc(utcInstant, zone);
+            var offset = zone.GetUtcOffset(utcInstant);
+            snapshots.Add(new ZoneSnapshot(
+                option.DisplayName,
+                FormatDateTime(local),
+                FormatOffset(offset),
+                option.Key == targetOption.Key));
+        }
+
+        return snapshots
+            .OrderBy(snapshot => snapshot.IsTarget ? 0 : 1)
+            .ThenBy(snapshot => snapshot.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    private static string FormatDateTime(DateTime value) =>
+        value.ToString("dddd, MMM d yyyy • h:mm tt", CultureInfo.InvariantCulture);
+
+    private static string FormatUtc(DateTime value) =>
+        value.ToString("yyyy-MM-dd HH:mm:ss 'UTC'", CultureInfo.InvariantCulture);
+
+    private static string FormatOffset(TimeSpan offset)
+    {
+        var sign = offset < TimeSpan.Zero ? "-" : "+";
+        offset = offset.Duration();
+        return $"{sign}{offset:hh\\:mm}";
+    }
+
+    private static string FormatDifference(TimeSpan difference)
+    {
+        var sign = difference < TimeSpan.Zero ? "-" : "+";
+        difference = difference.Duration();
+        if (difference == TimeSpan.Zero)
+        {
+            return "Same local time";
+        }
+
+        var hours = (int)difference.TotalHours;
+        var minutes = difference.Minutes;
+        return minutes == 0
+            ? $"{sign}{hours} hour(s)"
+            : $"{sign}{hours}h {minutes}m";
+    }
+
+    private static bool TryResolveTimeZone(TimeZoneOption option, out TimeZoneInfo timeZone)
+    {
+        foreach (var id in option.CandidateIds)
+        {
+            if (string.IsNullOrWhiteSpace(id))
+            {
+                continue;
+            }
+
+            try
+            {
+                timeZone = id.Equals("UTC", StringComparison.OrdinalIgnoreCase)
+                    ? TimeZoneInfo.Utc
+                    : TimeZoneInfo.FindSystemTimeZoneById(id);
+                return true;
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                // Try next candidate.
+            }
+            catch (InvalidTimeZoneException)
+            {
+                // Try next candidate.
+            }
+        }
+
+        timeZone = default!;
+        return false;
+    }
+
+    private record TimeZoneOption(string Key, string DisplayName, params string[] candidateIds)
+    {
+        public IReadOnlyList<string> CandidateIds { get; } = candidateIds is { Length: > 0 }
+            ? candidateIds.ToList()
+            : new List<string>();
+    }
+
+    private record ConversionResult(
+        string SourceDisplayName,
+        string TargetDisplayName,
+        string SourceTimeLabel,
+        string TargetTimeLabel,
+        string SourceOffsetLabel,
+        string TargetOffsetLabel,
+        string UtcLabel,
+        string DifferenceLabel,
+        bool SourceAmbiguous,
+        bool TargetAmbiguous);
+
+    private record ZoneSnapshot(string DisplayName, string TimeLabel, string OffsetLabel, bool IsTarget);
+}

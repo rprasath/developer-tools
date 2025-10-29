@@ -1,0 +1,171 @@
+@page "/httpstatuses"
+@using System.Linq
+@inject IJSRuntime JSRuntime
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">HTTP Status Explorer</h1>
+        <p class="text-gray-600 mt-2">
+            Quickly look up status codes, official reason phrases, and practical guidance for handling REST and webhook responses.
+        </p>
+    </div>
+
+    <section class="bg-white rounded-lg shadow-md overflow-hidden">
+        <div class="p-6 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="md:col-span-2">
+                    <label for="status-search" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                        Search
+                    </label>
+                    <input id="status-search"
+                           type="search"
+                           @bind="SearchTerm"
+                           @bind:event="oninput"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                           placeholder="404, not found, cache, redirect..." />
+                </div>
+                <div>
+                    <label for="category" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2">
+                        Category
+                    </label>
+                    <select id="category"
+                            @bind="SelectedCategory"
+                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="All">All classes</option>
+                        @foreach (var category in Categories)
+                        {
+                            <option value="@category">@category</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <p class="text-xs text-gray-500">
+                Tip: filter for retryable responses (<code>5xx</code>), caching hints (<code>304</code>), or authentication failures (<code>401</code>/ <code>403</code>).
+            </p>
+        </div>
+    </section>
+
+    <section class="space-y-4">
+        @if (!FilteredStatuses.Any())
+        {
+            <div class="bg-white border border-dashed border-gray-300 rounded-lg p-6 text-center text-gray-500">
+                No status codes found. Try a different keyword or clear the search.
+            </div>
+        }
+        else
+        {
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                @foreach (var status in FilteredStatuses)
+                {
+                    <article class="bg-white rounded-lg shadow-md border border-gray-100 overflow-hidden">
+                        <header class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                            <div class="flex items-center gap-3">
+                                <span class="@GetBadgeClasses(status.Code)">
+                                    @status.Code
+                                </span>
+                                <div>
+                                    <h3 class="text-base font-semibold text-gray-800">@status.Phrase</h3>
+                                    <p class="text-xs text-gray-500 uppercase tracking-wide">@status.Category</p>
+                                </div>
+                            </div>
+                            <button @onclick="() => CopyStatus(status)"
+                                    id="@($"status-copy-{status.Code}")"
+                                    class="text-gray-500 hover:text-gray-700"
+                                    title="Copy to clipboard">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                            </button>
+                        </header>
+                        <div class="px-4 py-4 space-y-3 text-sm text-gray-700">
+                            <p>@status.Description</p>
+                            @if (!string.IsNullOrWhiteSpace(status.Notes))
+                            {
+                                <p class="text-xs text-gray-500">@status.Notes</p>
+                            }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    </section>
+</div>
+
+@code {
+    private string SearchTerm { get; set; } = string.Empty;
+    private string SelectedCategory { get; set; } = "All";
+
+    private IReadOnlyList<string> Categories { get; } = new[]
+    {
+        "Informational (1xx)",
+        "Success (2xx)",
+        "Redirection (3xx)",
+        "Client error (4xx)",
+        "Server error (5xx)"
+    };
+
+    private IReadOnlyList<HttpStatusEntry> Statuses { get; } = new List<HttpStatusEntry>
+    {
+        new(100, "Continue", "Informational (1xx)", "Request headers received; client can proceed with body."),
+        new(101, "Switching Protocols", "Informational (1xx)", "Server agrees to upgrade protocol (e.g. WebSocket)."),
+        new(200, "OK", "Success (2xx)", "Standard success response; inspect the body for resource details."),
+        new(201, "Created", "Success (2xx)", "Resource created successfully. Location header usually contains the URI."),
+        new(202, "Accepted", "Success (2xx)", "Request accepted for processing but work continues asynchronously."),
+        new(204, "No Content", "Success (2xx)", "Operation succeeded with no payload. Ideal for DELETE responses."),
+        new(206, "Partial Content", "Success (2xx)", "Response serves a byte range. Check Content-Range header."),
+        new(301, "Moved Permanently", "Redirection (3xx)", "Resource has a new canonical URL. Update cached links."),
+        new(302, "Found", "Redirection (3xx)", "Temporary redirect. HTTP clients usually follow automatically."),
+        new(304, "Not Modified", "Redirection (3xx)", "Cached representation is still valid. Serve from cache.")
+            { Notes = "Return ETag or Last-Modified headers with your cached response to keep clients efficient." },
+        new(307, "Temporary Redirect", "Redirection (3xx)", "Redirect preserving the request method and body."),
+        new(308, "Permanent Redirect", "Redirection (3xx)", "Permanent redirect preserving method. Update callers."),
+        new(400, "Bad Request", "Client error (4xx)", "Request cannot be processed. Validate payload and query parameters."),
+        new(401, "Unauthorized", "Client error (4xx)", "Authentication required or token expired. Refresh credentials.")
+            { Notes = "Check the WWW-Authenticate header for the required scheme or scopes." },
+        new(403, "Forbidden", "Client error (4xx)", "Authenticated but not allowed. Check permissions or scopes."),
+        new(404, "Not Found", "Client error (4xx)", "Resource missing or caller lacks discovery rights."),
+        new(405, "Method Not Allowed", "Client error (4xx)", "Resource does not support the HTTP method used."),
+        new(409, "Conflict", "Client error (4xx)", "State conflict. Retry after reconciling version, keys, or workflow."),
+        new(410, "Gone", "Client error (4xx)", "Resource permanently removed. Stop retrying."),
+        new(415, "Unsupported Media Type", "Client error (4xx)", "Content-Type not accepted. Adjust serializer."),
+        new(418, "I'm a teapot", "Client error (4xx)", "RFC 2324 easter egg. Indicates a playful or misrouted request."),
+        new(429, "Too Many Requests", "Client error (4xx)", "Rate limit exceeded. Respect Retry-After header.")
+            { Notes = "Honor the Retry-After header, and exponentially back off to avoid throttling cascades." },
+        new(500, "Internal Server Error", "Server error (5xx)", "Server fault. Capture correlation IDs and retry if safe."),
+        new(502, "Bad Gateway", "Server error (5xx)", "Upstream dependency failed. Retry with backoff."),
+        new(503, "Service Unavailable", "Server error (5xx)", "Service temporarily overloaded or down for maintenance.")
+            { Notes = "Provide Retry-After to guide clients and keep alerts quiet during maintenance windows." },
+        new(504, "Gateway Timeout", "Server error (5xx)", "Upstream timeout. Consider shorter payloads or async patterns.")
+    };
+
+    private IEnumerable<HttpStatusEntry> FilteredStatuses => Statuses
+        .Where(status =>
+            (SelectedCategory == "All" || status.Category == SelectedCategory) &&
+            (string.IsNullOrWhiteSpace(SearchTerm) ||
+             status.Code.ToString().Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+             status.Phrase.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+             status.Description.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase) ||
+             (!string.IsNullOrWhiteSpace(status.Notes) && status.Notes.Contains(SearchTerm, StringComparison.OrdinalIgnoreCase))))
+        .OrderBy(status => status.Code);
+
+    private string GetBadgeClasses(int code)
+    {
+        if (code is >= 100 and < 200) return "text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full bg-sky-100 text-sky-700";
+        if (code is >= 200 and < 300) return "text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full bg-emerald-100 text-emerald-700";
+        if (code is >= 300 and < 400) return "text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full bg-indigo-100 text-indigo-700";
+        if (code is >= 400 and < 500) return "text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full bg-amber-100 text-amber-700";
+        return "text-xs font-semibold uppercase tracking-wide px-3 py-1 rounded-full bg-rose-100 text-rose-700";
+    }
+
+    private async Task CopyStatus(HttpStatusEntry status)
+    {
+        var content = $"{status.Code} {status.Phrase}";
+        await JSRuntime.InvokeVoidAsync("copyToClipboard", content, $"status-copy-{status.Code}");
+    }
+
+    private record HttpStatusEntry(int Code, string Phrase, string Category, string Description)
+    {
+        public string Notes { get; init; } = string.Empty;
+    }
+}

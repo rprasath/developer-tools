@@ -1,0 +1,741 @@
+@page "/jsontocode"
+@using System
+@using System.Collections.Generic
+@using System.Globalization
+@using System.Linq
+@using System.Text
+@using System.Text.Json
+@using System.Text.RegularExpressions
+@using Microsoft.JSInterop
+@inject Microsoft.JSInterop.IJSRuntime JSRuntime
+
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">JSON to Code</h1>
+        <p class="text-gray-600 mt-2">
+            Turn JSON payloads into strongly-typed models for .NET and TypeScript. Paste a sample response, choose the
+            root class name, and copy the generated code—ideal for API contracts and integration tests.
+        </p>
+    </div>
+
+    <section class="bg-white rounded-lg shadow-md overflow-hidden">
+        <header class="border-b border-gray-200 px-6 py-4">
+            <h2 class="text-lg font-semibold text-gray-800">Input JSON</h2>
+        </header>
+        <div class="p-6 space-y-4">
+            <textarea @bind="JsonInput"
+                      class="w-full h-56 border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                      placeholder="Paste JSON or drop it here."></textarea>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-700">
+                <div>
+                    <label class="block text-xs font-semibold uppercase tracking-wide mb-1" for="root-class-name">
+                        Root class / interface name
+                    </label>
+                    <input id="root-class-name"
+                           type="text"
+                           @bind="RootClassName"
+                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                           placeholder="Root" />
+                </div>
+                <div class="flex items-center gap-2 mt-6 md:mt-0">
+                    <button @onclick="UseSample"
+                            class="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                        Sample JSON
+                    </button>
+                    <button @onclick="ClearInput"
+                            class="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                        Clear
+                    </button>
+                </div>
+                <div class="flex items-center md:justify-end">
+                    <button @onclick="GenerateCode"
+                            class="mt-6 md:mt-0 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        Generate code
+                    </button>
+                </div>
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(GenerationError))
+            {
+                <div class="rounded-md bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2">
+                    @GenerationError
+                </div>
+            }
+        </div>
+    </section>
+
+    @if (!string.IsNullOrWhiteSpace(CSharpOutput) || !string.IsNullOrWhiteSpace(TypeScriptOutput))
+    {
+        <section class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            @if (!string.IsNullOrWhiteSpace(CSharpOutput))
+            {
+                <article class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-800">C# models</h2>
+                            <p class="text-xs text-gray-500">Uses <code>System.Text.Json</code> annotations for stability.</p>
+                        </div>
+                        <button @onclick="CopyCSharpAsync"
+                                id="json-to-code-csharp"
+                                class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                            Copy
+                        </button>
+                    </header>
+                    <pre class="p-6 bg-gray-50 font-mono text-sm leading-6 min-h-[16rem] overflow-auto">@CSharpHeaderComment@CSharpOutput</pre>
+                </article>
+            }
+            @if (!string.IsNullOrWhiteSpace(TypeScriptOutput))
+            {
+                <article class="bg-white rounded-lg shadow-md overflow-hidden">
+                    <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+                        <div>
+                            <h2 class="text-lg font-semibold text-gray-800">TypeScript interfaces</h2>
+                            <p class="text-xs text-gray-500">Exports a root type plus any nested interfaces.</p>
+                        </div>
+                        <button @onclick="CopyTypeScriptAsync"
+                                id="json-to-code-ts"
+                                class="text-blue-600 hover:text-blue-700 text-sm font-medium">
+                            Copy
+                        </button>
+                    </header>
+                    <pre class="p-6 bg-gray-50 font-mono text-sm leading-6 min-h-[16rem] overflow-auto">@TypeScriptHeaderComment@TypeScriptOutput</pre>
+                </article>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private string JsonInput { get; set; } = SamplePayload;
+    private string RootClassName { get; set; } = "Root";
+    private string? GenerationError { get; set; }
+    private string CSharpOutput { get; set; } = string.Empty;
+    private string TypeScriptOutput { get; set; } = string.Empty;
+    private string CSharpHeaderComment { get; set; } = string.Empty;
+    private string TypeScriptHeaderComment { get; set; } = string.Empty;
+
+    private static string SamplePayload => @"
+{
+  ""id"": 42,
+  ""name"": ""Widget"",
+  ""price"": 12.99,
+  ""tags"": [""hardware"", ""inventory""],
+  ""owner"": {
+    ""id"": ""user-9"",
+    ""email"": ""ada@example.com"",
+    ""isActive"": true
+  },
+  ""updatedAt"": ""2024-06-02T09:30:00Z"",
+  ""notes"": null
+}
+".Trim();
+
+    private async Task CopyCSharpAsync()
+    {
+        if (!string.IsNullOrEmpty(CSharpOutput))
+        {
+            await JSRuntime.InvokeVoidAsync("copyToClipboard", CSharpHeaderComment + CSharpOutput, "json-to-code-csharp");
+        }
+    }
+
+    private async Task CopyTypeScriptAsync()
+    {
+        if (!string.IsNullOrEmpty(TypeScriptOutput))
+        {
+            await JSRuntime.InvokeVoidAsync("copyToClipboard", TypeScriptHeaderComment + TypeScriptOutput, "json-to-code-ts");
+        }
+    }
+
+    private void UseSample()
+    {
+        JsonInput = SamplePayload;
+        RootClassName = "Root";
+        GenerateCode();
+    }
+
+    private void ClearInput()
+    {
+        JsonInput = string.Empty;
+        GenerationError = null;
+        CSharpOutput = string.Empty;
+        TypeScriptOutput = string.Empty;
+        CSharpHeaderComment = string.Empty;
+        TypeScriptHeaderComment = string.Empty;
+    }
+
+    private void GenerateCode()
+    {
+        GenerationError = null;
+        CSharpOutput = string.Empty;
+        TypeScriptOutput = string.Empty;
+        CSharpHeaderComment = string.Empty;
+        TypeScriptHeaderComment = string.Empty;
+
+        if (string.IsNullOrWhiteSpace(JsonInput))
+        {
+            GenerationError = "Paste a JSON document to generate code.";
+            return;
+        }
+
+        var sanitizedRootName = SanitizeClassName(RootClassName);
+        if (string.IsNullOrWhiteSpace(sanitizedRootName))
+        {
+            sanitizedRootName = "Root";
+        }
+
+        try
+        {
+            using var document = JsonDocument.Parse(JsonInput);
+            var context = new GenerationContext(sanitizedRootName);
+
+            var rootElement = document.RootElement;
+            var (rootCSharpType, rootTsType) = ProcessRoot(rootElement, sanitizedRootName, context);
+
+            CSharpOutput = BuildCSharpOutput(context, rootCSharpType);
+            TypeScriptOutput = BuildTypeScriptOutput(context, rootTsType);
+            CSharpHeaderComment = $"// Root type: {rootCSharpType}{Environment.NewLine}{Environment.NewLine}";
+            TypeScriptHeaderComment = $"// Root type: {rootTsType}{Environment.NewLine}{Environment.NewLine}";
+        }
+        catch (JsonException ex)
+        {
+            GenerationError = $"JSON parse error (line {ex.LineNumber}, byte {ex.BytePositionInLine}): {ex.Message}";
+        }
+    }
+
+    private static (string csharpType, string tsType) ProcessRoot(JsonElement root, string rootName, GenerationContext context)
+    {
+        if (root.ValueKind == JsonValueKind.Array)
+        {
+            var descriptor = DescribeArrayDescriptor(root, $"{rootName}Item", rootName, context);
+            return (descriptor.CSharpType, descriptor.TypeScriptType);
+        }
+
+        if (root.ValueKind == JsonValueKind.Object)
+        {
+            var className = ProcessObject(root, rootName, rootName, context);
+            return (className, className);
+        }
+
+        var primitive = DescribePrimitive(root);
+        return (primitive.CSharpType, primitive.TypeScriptType);
+    }
+
+    private static string ProcessObject(JsonElement element, string suggestedName, string path, GenerationContext context)
+    {
+        var className = context.ResolveClassName(path, suggestedName);
+        var classModel = context.GetOrAddClass(className);
+
+        foreach (var property in element.EnumerateObject())
+        {
+            var propertyPath = $"{path}.{property.Name}";
+            var descriptor = DescribeElement(property.Value, property.Name, propertyPath, context);
+            var propertyName = context.GetUniquePropertyName(className, SanitizePropertyName(property.Name));
+            var generatedProperty = new GeneratedProperty(property.Name, propertyName, descriptor);
+            classModel.AddProperty(generatedProperty);
+        }
+
+        return className;
+    }
+
+    private static TypeDescriptor DescribeElement(JsonElement element, string suggestedName, string path, GenerationContext context)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                {
+                    var className = ProcessObject(element, ToPascalCase(suggestedName, "Item"), path, context);
+                    return new TypeDescriptor
+                    {
+                        CSharpType = className,
+                        IsValueType = false,
+                        IsNullable = false,
+                        IsCollection = false,
+                        TypeScriptType = className,
+                        TypeScriptNullable = false
+                    };
+                }
+            case JsonValueKind.Array:
+                return DescribeArrayDescriptor(element, ToPascalCase(suggestedName, "Item"), path, context);
+            default:
+                return DescribePrimitive(element);
+        }
+    }
+
+    private static TypeDescriptor DescribeArrayDescriptor(JsonElement array, string itemName, string path, GenerationContext context)
+    {
+        var items = array.EnumerateArray().ToList();
+        var containsNull = items.Any(item => item.ValueKind == JsonValueKind.Null);
+        var firstRealItem = items.FirstOrDefault(item => item.ValueKind != JsonValueKind.Null);
+
+        if (firstRealItem.ValueKind == JsonValueKind.Undefined)
+        {
+            return new TypeDescriptor
+            {
+                CSharpType = "List<object>",
+                IsValueType = false,
+                IsNullable = false,
+                IsCollection = true,
+                CollectionInstantiation = "List<object>",
+                TypeScriptType = "any[]",
+                TypeScriptNullable = false
+            };
+        }
+
+        var itemDescriptor = DescribeElement(firstRealItem, itemName, $"{path}[]", context);
+        var elementType = BuildElementDeclarationType(itemDescriptor, containsNull);
+        var instantiationElementType = elementType.TrimEnd('?');
+
+        var csharpType = $"List<{elementType}>";
+        var tsElementType = AddNullUnion(itemDescriptor.TypeScriptType, itemDescriptor.TypeScriptNullable || containsNull);
+        var tsType = tsElementType.Contains(' ') || tsElementType.Contains('|', StringComparison.Ordinal)
+            ? $"({tsElementType})[]"
+            : $"{tsElementType}[]";
+
+        return new TypeDescriptor
+        {
+            CSharpType = csharpType,
+            IsValueType = false,
+            IsNullable = false,
+            IsCollection = true,
+            CollectionInstantiation = $"List<{instantiationElementType}>",
+            TypeScriptType = tsType,
+            TypeScriptNullable = false
+        };
+    }
+
+    private static TypeDescriptor DescribePrimitive(JsonElement element)
+    {
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.String:
+                return new TypeDescriptor
+                {
+                    CSharpType = "string",
+                    IsValueType = false,
+                    IsNullable = false,
+                    IsCollection = false,
+                    TypeScriptType = "string",
+                    TypeScriptNullable = false
+                };
+            case JsonValueKind.Number:
+                if (element.TryGetInt64(out _))
+                {
+                    return new TypeDescriptor
+                    {
+                        CSharpType = "long",
+                        IsValueType = true,
+                        IsNullable = false,
+                        IsCollection = false,
+                        TypeScriptType = "number",
+                        TypeScriptNullable = false
+                    };
+                }
+
+                return new TypeDescriptor
+                {
+                    CSharpType = "decimal",
+                    IsValueType = true,
+                    IsNullable = false,
+                    IsCollection = false,
+                    TypeScriptType = "number",
+                    TypeScriptNullable = false
+                };
+            case JsonValueKind.False:
+            case JsonValueKind.True:
+                return new TypeDescriptor
+                {
+                    CSharpType = "bool",
+                    IsValueType = true,
+                    IsNullable = false,
+                    IsCollection = false,
+                    TypeScriptType = "boolean",
+                    TypeScriptNullable = false
+                };
+            case JsonValueKind.Null:
+                return new TypeDescriptor
+                {
+                    CSharpType = "object",
+                    IsValueType = false,
+                    IsNullable = true,
+                    IsCollection = false,
+                    TypeScriptType = "any",
+                    TypeScriptNullable = true
+                };
+            default:
+                return new TypeDescriptor
+                {
+                    CSharpType = "object",
+                    IsValueType = false,
+                    IsNullable = true,
+                    IsCollection = false,
+                    TypeScriptType = "any",
+                    TypeScriptNullable = true
+                };
+        }
+    }
+
+    private static string BuildCSharpOutput(GenerationContext context, string rootType)
+    {
+        if (context.ClassOrder.Count == 0)
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder();
+        sb.AppendLine("using System.Collections.Generic;");
+        sb.AppendLine("using System.Text.Json.Serialization;");
+        sb.AppendLine();
+
+        foreach (var className in context.ClassOrder)
+        {
+            var classModel = context.Classes[className];
+            sb.AppendLine($"public class {classModel.Name}");
+            sb.AppendLine("{");
+
+            foreach (var property in classModel.Properties)
+            {
+                if (!property.JsonName.Equals(property.PropertyName, StringComparison.Ordinal))
+                {
+                    sb.AppendLine($"    [JsonPropertyName(\"{EscapeString(property.JsonName)}\")]");
+                }
+
+                sb.AppendLine($"    public {property.CSharpDeclarationType} {property.CSharpPropertyName} {{ get; set; }}{property.Initializer}");
+                sb.AppendLine();
+            }
+
+            if (classModel.Properties.Count > 0)
+            {
+                sb.Length -= Environment.NewLine.Length;
+            }
+
+            sb.AppendLine("}");
+            sb.AppendLine();
+        }
+
+        if (context.ClassOrder.Count > 0)
+        {
+            sb.Length -= Environment.NewLine.Length;
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildTypeScriptOutput(GenerationContext context, string rootType)
+    {
+        if (context.ClassOrder.Count == 0)
+        {
+            return $"export type {context.RootName} = {rootType};";
+        }
+
+        var sb = new StringBuilder();
+
+        foreach (var className in context.ClassOrder)
+        {
+            var classModel = context.Classes[className];
+            if (sb.Length > 0)
+            {
+                sb.AppendLine();
+            }
+            sb.AppendLine($"export interface {classModel.Name}");
+            sb.AppendLine("{");
+
+            foreach (var property in classModel.Properties)
+            {
+                var propertyName = FormatTypeScriptPropertyName(property.JsonName);
+                var optionalMarker = property.Descriptor.TypeScriptNullable ? "?" : string.Empty;
+                var type = property.Descriptor.TypeScriptNullable
+                    ? AddNullUnion(property.Descriptor.TypeScriptType, true)
+                    : property.Descriptor.TypeScriptType;
+                sb.AppendLine($"    {propertyName}{optionalMarker}: {type};");
+            }
+
+            sb.AppendLine("}");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildElementDeclarationType(TypeDescriptor descriptor, bool includesNull)
+    {
+        var type = descriptor.CSharpType;
+        if (descriptor.IsCollection)
+        {
+            if (descriptor.IsNullable || includesNull)
+            {
+                if (!type.EndsWith("?", StringComparison.Ordinal))
+                {
+                    type += "?";
+                }
+            }
+
+            return type;
+        }
+
+        if (descriptor.IsValueType && (descriptor.IsNullable || includesNull))
+        {
+            type += "?";
+        }
+        else if (!descriptor.IsValueType && (descriptor.IsNullable || includesNull))
+        {
+            if (!type.EndsWith("?", StringComparison.Ordinal))
+            {
+                type += "?";
+            }
+        }
+
+        return type;
+    }
+
+    private static string AddNullUnion(string type, bool includeNull)
+    {
+        if (!includeNull)
+        {
+            return type;
+        }
+
+        return type.Contains("null", StringComparison.Ordinal)
+            ? type
+            : $"{type} | null";
+    }
+
+    private static string SanitizeClassName(string input)
+    {
+        var candidate = ToPascalCase(input, "Root");
+        return EnsureValidIdentifier(candidate, "Root");
+    }
+
+    private static string SanitizePropertyName(string input)
+    {
+        var candidate = ToPascalCase(input, "Property");
+        return EnsureValidIdentifier(candidate, "Property");
+    }
+
+    private static string EnsureValidIdentifier(string candidate, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return fallback;
+        }
+
+        if (!char.IsLetter(candidate[0]) && candidate[0] != '_')
+        {
+            candidate = "_" + candidate;
+        }
+
+        return candidate;
+    }
+
+    private static string ToPascalCase(string input, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(input))
+        {
+            return fallback;
+        }
+
+        var matches = Regex.Matches(input, "[A-Za-z0-9]+");
+        if (matches.Count == 0)
+        {
+            return fallback;
+        }
+
+        var builder = new StringBuilder();
+        foreach (Match match in matches)
+        {
+            var word = match.Value;
+            builder.Append(char.ToUpperInvariant(word[0]));
+            if (word.Length > 1)
+            {
+                builder.Append(word.Substring(1).ToLowerInvariant());
+            }
+        }
+
+        return builder.ToString();
+    }
+
+    private static string EscapeString(string raw) =>
+        raw.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("\"", "\\\"", StringComparison.Ordinal);
+
+    private static string FormatTypeScriptPropertyName(string name) =>
+        Regex.IsMatch(name, "^[A-Za-z_][A-Za-z0-9_]*$")
+            ? name
+            : $"'{name.Replace("'", "\\'", StringComparison.Ordinal)}'";
+
+    sealed class GenerationContext
+    {
+        private readonly Dictionary<string, string> _pathToClassName = new(StringComparer.Ordinal);
+        private readonly HashSet<string> _usedClassNames = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, HashSet<string>> _classPropertyNames = new(StringComparer.Ordinal);
+
+        public GenerationContext(string rootName)
+        {
+            RootName = rootName;
+            _usedClassNames.Add(rootName);
+            _pathToClassName[rootName] = rootName;
+        }
+
+        public Dictionary<string, GeneratedClass> Classes { get; } = new(StringComparer.Ordinal);
+        public List<string> ClassOrder { get; } = new();
+        public string RootName { get; }
+
+        public string ResolveClassName(string path, string suggested)
+        {
+            if (_pathToClassName.TryGetValue(path, out var existing))
+            {
+                return existing;
+            }
+
+            var candidate = EnsureValidIdentifier(suggested, "Generated");
+            var unique = candidate;
+            var counter = 2;
+
+            while (_usedClassNames.Contains(unique))
+            {
+                unique = candidate + counter.ToString(CultureInfo.InvariantCulture);
+                counter++;
+            }
+
+            _usedClassNames.Add(unique);
+            _pathToClassName[path] = unique;
+            return unique;
+        }
+
+        public GeneratedClass GetOrAddClass(string name)
+        {
+            if (!Classes.TryGetValue(name, out var model))
+            {
+                model = new GeneratedClass(name);
+                Classes[name] = model;
+                ClassOrder.Add(name);
+            }
+
+            return model;
+        }
+
+        public string GetUniquePropertyName(string className, string candidate)
+        {
+            if (!_classPropertyNames.TryGetValue(className, out var set))
+            {
+                set = new HashSet<string>(StringComparer.Ordinal);
+                _classPropertyNames[className] = set;
+            }
+
+            var baseName = candidate;
+            var unique = baseName;
+            var counter = 2;
+
+            while (set.Contains(unique))
+            {
+                unique = baseName + counter.ToString(CultureInfo.InvariantCulture);
+                counter++;
+            }
+
+            set.Add(unique);
+            return unique;
+        }
+    }
+
+    sealed class GeneratedClass
+    {
+        public string Name { get; }
+        public List<GeneratedProperty> Properties { get; } = new();
+        private readonly HashSet<string> _jsonPropertyNames = new(StringComparer.Ordinal);
+
+        public GeneratedClass(string name)
+        {
+            Name = name;
+        }
+
+        public void AddProperty(GeneratedProperty property)
+        {
+            if (_jsonPropertyNames.Contains(property.JsonName))
+            {
+                return;
+            }
+
+            _jsonPropertyNames.Add(property.JsonName);
+            Properties.Add(property);
+        }
+    }
+
+    sealed class GeneratedProperty
+    {
+        private static readonly HashSet<string> CSharpKeywords = new(StringComparer.Ordinal)
+        {
+            "abstract", "as", "base", "bool", "break", "byte", "case", "catch", "char", "checked", "class",
+            "const", "continue", "decimal", "default", "delegate", "do", "double", "else", "enum", "event",
+            "explicit", "extern", "false", "finally", "fixed", "float", "for", "foreach", "goto", "if",
+            "implicit", "in", "int", "interface", "internal", "is", "lock", "long", "namespace", "new",
+            "null", "object", "operator", "out", "override", "params", "private", "protected", "public",
+            "readonly", "ref", "return", "sbyte", "sealed", "short", "sizeof", "stackalloc", "static",
+            "string", "struct", "switch", "this", "throw", "true", "try", "typeof", "uint", "ulong",
+            "unchecked", "unsafe", "ushort", "using", "virtual", "void", "volatile", "while"
+        };
+
+        public GeneratedProperty(string jsonName, string propertyName, TypeDescriptor descriptor)
+        {
+            JsonName = jsonName;
+            PropertyName = propertyName;
+            Descriptor = descriptor;
+        }
+
+        public string JsonName { get; }
+        public string PropertyName { get; }
+        public TypeDescriptor Descriptor { get; }
+
+        public string CSharpPropertyName =>
+            CSharpKeywords.Contains(PropertyName) ? $"@{PropertyName}" : PropertyName;
+
+        public string CSharpDeclarationType
+        {
+            get
+            {
+                if (Descriptor.IsValueType)
+                {
+                    return Descriptor.IsNullable ? $"{Descriptor.CSharpType}?" : Descriptor.CSharpType;
+                }
+
+                if (Descriptor.IsCollection && Descriptor.IsNullable)
+                {
+                    return $"{Descriptor.CSharpType}?";
+                }
+
+                if (!Descriptor.IsValueType && Descriptor.IsNullable && !Descriptor.CSharpType.EndsWith("?", StringComparison.Ordinal))
+                {
+                    return $"{Descriptor.CSharpType}?";
+                }
+
+                return Descriptor.CSharpType;
+            }
+        }
+
+        public string Initializer
+        {
+            get
+            {
+                if (Descriptor.IsCollection && !Descriptor.IsNullable)
+                {
+                    return $" = new {Descriptor.CollectionInstantiation ?? Descriptor.CSharpType}();";
+                }
+
+                if (!Descriptor.IsValueType && !Descriptor.IsNullable)
+                {
+                    return " = default!;";
+                }
+
+                return string.Empty;
+            }
+        }
+    }
+
+    sealed class TypeDescriptor
+    {
+        public string CSharpType { get; init; } = string.Empty;
+        public bool IsValueType { get; init; }
+        public bool IsNullable { get; init; }
+        public bool IsCollection { get; init; }
+        public string? CollectionInstantiation { get; init; }
+        public string TypeScriptType { get; init; } = string.Empty;
+        public bool TypeScriptNullable { get; init; }
+    }
+}

@@ -1,49 +1,182 @@
 ﻿@page "/replacelinebreaks"
 @inject IJSRuntime JSRuntime
 
-<div class="max-w-screen-xl mx-auto">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Replace Line Breaks</h1>
+<div class="max-w-screen-xl mx-auto space-y-8">
+    <div>
+        <h1 class="text-3xl font-bold text-gray-800">Line Break Toolkit</h1>
+        <p class="text-gray-600 mt-2">
+            Clean, deduplicate, and reshape line-based content into the exact format you need. Configure the delimiter,
+            quoting, sort order, and generate SQL helper scripts without touching a text editor.
+        </p>
+    </div>
 
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="p-6">
-            <!-- Input Area -->
-            <div class="mb-6">
-                <label for="inputTxt" class="text-sm font-medium text-gray-700 mb-2 block">Input</label>
-                <textarea @bind="Input" class="w-full h-48 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" id="inputTxt"></textarea>
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 p-6">
+            <div class="space-y-4">
+                <div>
+                    <label for="inputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">Input</label>
+                    <textarea @bind="Input"
+                              class="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                              id="inputTxt"
+                              placeholder="Paste each item on its own line..."></textarea>
+                </div>
+
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
+                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Join options</h2>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="delimiter-input">Delimiter</label>
+                            <input id="delimiter-input"
+                                   type="text"
+                                   @bind="CustomDelimiter"
+                                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                   placeholder=", " />
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="prefix-input">Prefix</label>
+                                <input id="prefix-input"
+                                       type="text"
+                                       @bind="WrapPrefix"
+                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="'" />
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="suffix-input">Suffix</label>
+                                <input id="suffix-input"
+                                       type="text"
+                                       @bind="WrapSuffix"
+                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                       placeholder="'" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap gap-4 text-sm text-gray-700">
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="TrimWhitespace" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Trim whitespace
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="IgnoreEmptyLines" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Ignore empty
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="DistinctValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Distinct
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="SortValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Sort ascending
+                        </label>
+                        <label class="inline-flex items-center gap-2">
+                            <input type="checkbox" @bind="WrapValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                            Apply prefix/suffix
+                        </label>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button @onclick="ApplyCustomJoin"
+                                class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                            Join with options
+                        </button>
+                        <button @onclick="BuildJsonArray"
+                                class="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
+                            JSON array
+                        </button>
+                        <button @onclick="BuildMarkdownList"
+                                class="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
+                            Markdown list
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Action Buttons -->
-            <div class="flex flex-wrap gap-2 mb-6">
-                <button @onclick="CreateSQLTemp" class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                    SQL Query
-                </button>
-                <button @onclick="CreateMultiColumnSQLTemp" class="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
-                    Multi Column SQL Query
-                </button>
-                <button @onclick="CommaSeperation" class="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
-                    Comma Separate
-                </button>
-                <button @onclick="CommaSeperationWithQuotes" class="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
-                    Comma Separate (Distinct, Quote)
-                </button>
-                <button @onclick="DistinctSort" class="px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors">
-                    Sort (Distinct)
-                </button>
-            </div>
+            <div class="space-y-4">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                    <div class="relative">
+                        <label for="outputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">Output</label>
+                        <textarea @bind="Output"
+                                  class="w-full h-64 p-3 border border-gray-300 rounded-md bg-white font-mono text-sm"
+                                  id="outputTxt"
+                                  readonly></textarea>
+                        <button @onclick="CopyOutputToClipboard"
+                                id="copy-output-btn"
+                                class="absolute right-3 top-10 text-gray-500 hover:text-gray-700 focus:outline-none"
+                                title="Copy to clipboard">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
+                        </button>
+                        <p class="text-xs text-gray-500 mt-2">@FooterString</p>
+                    </div>
+                </div>
 
-            <!-- Output Area -->
-            <div class="relative">
-                <label for="outputTxt" class="text-sm font-medium text-gray-700 mb-2 block">Output</label>
-                <textarea @bind="Output" class="w-full h-48 p-3 border border-gray-300 rounded-md bg-gray-50" id="outputTxt" readonly></textarea>
-                <button @onclick="CopyOutputToClipboard" 
-                        id="copy-output-btn" 
-                        class="absolute right-2 top-10 text-gray-500 hover:text-gray-700 focus:outline-none"
-                        title="Copy to clipboard">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                </button>
-                <p class="text-xs text-gray-500 mt-2">@(FooterString)</p>
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="flex divide-x divide-gray-200 bg-white">
+                        <button type="button"
+                                class="@GetTabButtonClass(ActionTab.Formatter)"
+                                @onclick="() => SelectTab(ActionTab.Formatter)">
+                            Formatter
+                        </button>
+                        <button type="button"
+                                class="@GetTabButtonClass(ActionTab.Sql)"
+                                @onclick="() => SelectTab(ActionTab.Sql)">
+                            SQL
+                        </button>
+                    </div>
+                    <div class="bg-gray-50 p-4">
+                        @if (ActiveTab == ActionTab.Formatter)
+                        {
+                            <div class="space-y-4">
+                                <p class="text-xs text-gray-600 leading-relaxed">
+                                    Quick presets for common formatting: grab your preferred output without touching the mouse.
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <button @onclick="CommaSeperation"
+                                            class="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
+                                        Comma separated
+                                    </button>
+                                    <button @onclick="CommaSeperationWithQuotes"
+                                            class="w-full px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors">
+                                        Comma (distinct + quoted)
+                                    </button>
+                                    <button @onclick="DistinctSort"
+                                            class="w-full px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors">
+                                        Distinct + sorted lines
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="space-y-4">
+                                <p class="text-xs text-gray-600 leading-relaxed">
+                                    Generate SQL-ready snippets without opening an editor. Choose the helper you need and paste the result.
+                                </p>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                    <button @onclick="BuildSqlInClause"
+                                            class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
+                                        SQL IN clause
+                                    </button>
+                                    <button @onclick="CreateSQLTemp"
+                                            class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                                        Single column temp table
+                                    </button>
+                                    <button @onclick="CreateMultiColumnSQLTemp"
+                                            class="w-full px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 transition-colors">
+                                        Multi column temp table
+                                    </button>
+                                    <button @onclick="BuildInsertStatements"
+                                            class="w-full px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors">
+                                        INSERT ... VALUES script
+                                    </button>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -54,6 +187,29 @@
     public string? Output { get; set; }
     public string? FooterString { get; set; }
 
+    private string CustomDelimiter { get; set; } = ", ";
+    private string? WrapPrefix { get; set; } = "'";
+    private string? WrapSuffix { get; set; } = "'";
+    private bool TrimWhitespace { get; set; } = true;
+    private bool IgnoreEmptyLines { get; set; } = true;
+    private bool DistinctValues { get; set; }
+    private bool SortValues { get; set; }
+    private bool WrapValues { get; set; } = true;
+    private ActionTab ActiveTab { get; set; } = ActionTab.Formatter;
+
+    private void SelectTab(ActionTab tab)
+    {
+        ActiveTab = tab;
+    }
+
+    private string GetTabButtonClass(ActionTab tab)
+    {
+        var baseClasses = "flex-1 px-4 py-2 text-sm font-semibold transition-colors focus:outline-none";
+        return ActiveTab == tab
+            ? $"{baseClasses} bg-blue-600 text-white"
+            : $"{baseClasses} bg-white text-gray-600 hover:text-gray-800";
+    }
+
     private void CreateSQLTemp()
     {
         if (string.IsNullOrWhiteSpace(Input))
@@ -61,8 +217,7 @@
             return;
         }
 
-        var input = Input.Replace(Environment.NewLine, ",");
-        var rows = input.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var rows = GetBasicRows();
 
         var chunkedRows = rows.Select((x, i) => new { Index = i, Value = x })
                              .GroupBy(x => x.Index / 950)
@@ -133,6 +288,100 @@
         }
     }
 
+    private void BuildInsertStatements()
+    {
+        if (string.IsNullOrWhiteSpace(Input))
+        {
+            return;
+        }
+
+        try
+        {
+            var rows = Input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
+            if (rows.Length < 2)
+            {
+                Output = "Provide a header row followed by data rows separated by tabs.";
+                return;
+            }
+
+            var headers = rows[0].Split('\t', StringSplitOptions.RemoveEmptyEntries);
+            var tableName = "#tempdata";
+
+            System.Text.StringBuilder builder = new();
+            builder.AppendLine($"insert into {tableName} ({string.Join(", ", headers)})");
+            builder.AppendLine("values");
+
+            var valueLines = new List<string>();
+            foreach (var row in rows.Skip(1))
+            {
+                var columns = row.Split('\t');
+                var formatted = columns
+                    .Select(col => string.IsNullOrWhiteSpace(col) || col.Equals("NULL", StringComparison.OrdinalIgnoreCase)
+                        ? "NULL"
+                        : QuoteSqlString(col));
+                valueLines.Add("(" + string.Join(", ", formatted) + ")");
+            }
+
+            builder.AppendLine(string.Join("," + Environment.NewLine, valueLines) + ";");
+            Output = builder.ToString();
+            FooterString = $"Generated insert statement for {rows.Length - 1} row(s).";
+        }
+        catch (Exception ex)
+        {
+            Output = ex.ToString();
+        }
+    }
+
+    private void ApplyCustomJoin()
+    {
+        var items = PrepareRows();
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        Output = string.Join(CustomDelimiter, items);
+        FooterString = BuildFooter(items.Count);
+    }
+
+    private void BuildSqlInClause()
+    {
+        var items = PrepareRows();
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        var quoted = items.Select(QuoteSqlString);
+        Output = $"in ({string.Join(", ", quoted)})";
+        FooterString = BuildFooter(items.Count);
+    }
+
+    private void BuildJsonArray()
+    {
+        var items = PrepareRows();
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        var serialized = items.Select(i => $"\"{EscapeForJson(i)}\"");
+        Output = $"[{string.Join(", ", serialized)}]";
+        FooterString = BuildFooter(items.Count);
+    }
+
+    private void BuildMarkdownList()
+    {
+        var items = PrepareRows();
+        if (items.Count == 0)
+        {
+            return;
+        }
+
+        Output = string.Join(Environment.NewLine, items.Select(i => $"- {i}"));
+        FooterString = BuildFooter(items.Count);
+    }
+
     private void CommaSeperation()
     {
         if (string.IsNullOrWhiteSpace(Input))
@@ -182,12 +431,95 @@
             FooterString = "No duplicates found";
         }
     }
-    
+
     private async Task CopyOutputToClipboard()
     {
         if (!string.IsNullOrEmpty(Output))
         {
             await JSRuntime.InvokeVoidAsync("copyToClipboard", Output, "copy-output-btn");
         }
+    }
+
+    private string[] GetBasicRows()
+    {
+        return Input?
+            .Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(row => row.Trim())
+            .Where(row => !string.IsNullOrWhiteSpace(row))
+            .ToArray() ?? Array.Empty<string>();
+    }
+
+    private List<string> PrepareRows()
+    {
+        var rows = Input?
+            .Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None)
+            .Select(row => TrimWhitespace ? row.Trim() : row)
+            .ToList() ?? new List<string>();
+
+        if (IgnoreEmptyLines)
+        {
+            rows = rows.Where(row => !string.IsNullOrWhiteSpace(row)).ToList();
+        }
+
+        if (DistinctValues)
+        {
+            rows = rows.Distinct().ToList();
+        }
+
+        if (SortValues)
+        {
+            rows = rows.OrderBy(row => row, StringComparer.OrdinalIgnoreCase).ToList();
+        }
+
+        if (WrapValues)
+        {
+            var prefix = WrapPrefix ?? string.Empty;
+            var suffix = WrapSuffix ?? string.Empty;
+            rows = rows.Select(row => $"{prefix}{row}{suffix}").ToList();
+        }
+
+        return rows;
+    }
+
+    private string BuildFooter(int count)
+    {
+        var modifiers = new List<string>();
+        if (TrimWhitespace)
+        {
+            modifiers.Add("trimmed");
+        }
+        if (IgnoreEmptyLines)
+        {
+            modifiers.Add("empty lines removed");
+        }
+        if (DistinctValues)
+        {
+            modifiers.Add("deduplicated");
+        }
+        if (SortValues)
+        {
+            modifiers.Add("sorted");
+        }
+
+        var descriptor = modifiers.Count > 0 ? $" ({string.Join(", ", modifiers)})" : string.Empty;
+        return $"{count} item(s){descriptor}";
+    }
+
+    private static string QuoteSqlString(string input)
+    {
+        var escaped = input.Replace("'", "''", StringComparison.Ordinal);
+        return $"'{escaped}'";
+    }
+
+    private static string EscapeForJson(string input)
+    {
+        var withSlashesEscaped = input.Replace("\\", "\\\\", StringComparison.Ordinal);
+        return withSlashesEscaped.Replace("\"", "\\\"", StringComparison.Ordinal);
+    }
+
+    private enum ActionTab
+    {
+        Formatter,
+        Sql
     }
 }
