@@ -21,3 +21,34 @@ function copyToClipboard(text, buttonId) {
             console.error('Failed to copy: ', err);
         });
 }
+
+function toggleElementFullscreen(elementId) {
+    const element = document.getElementById(elementId);
+    if (!element) {
+        return;
+    }
+
+    const active =
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.msFullscreenElement;
+
+    if (active === element) {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+        return;
+    }
+
+    if (element.requestFullscreen) {
+        element.requestFullscreen();
+    } else if (element.webkitRequestFullscreen) {
+        element.webkitRequestFullscreen();
+    } else if (element.msRequestFullscreen) {
+        element.msRequestFullscreen();
+    }
+}

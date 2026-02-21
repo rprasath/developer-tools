@@ -5,90 +5,86 @@
 @using Microsoft.JSInterop
 @inject IJSRuntime JSRuntime
 
-<div class="max-w-screen-xl mx-auto space-y-6">
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div class="max-w-screen-xl mx-auto space-y-2">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-1">
         <div>
-            <h1 class="text-3xl font-bold text-gray-800">Diff Viewer</h1>
-            <p class="text-gray-600">
-                Compare any two snippets with Monaco’s diff view. Configure the theme, layout, and formatting options to
-                match your workflow.
-            </p>
+            <h1 class="text-xl font-bold text-gray-800">Diff Viewer</h1>
+            <p class="text-xs text-gray-600">Compare two snippets quickly with Monaco diff.</p>
         </div>
         <div class="flex flex-wrap gap-2">
             <button @onclick="LoadSampleDiff"
-                    class="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
+                    class="px-2.5 py-1 text-xs bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
                 Load example
             </button>
             <button @onclick="SwapSidesAsync"
-                    class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                    class="px-2.5 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                 Swap panes
             </button>
             <button @onclick="ClearEditorsAsync"
-                    class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                    class="px-2.5 py-1 text-xs bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
                 Clear both
             </button>
         </div>
     </div>
 
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="border-b border-gray-200 px-6 py-4">
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="theme-select">Theme</label>
+        <div class="border-b border-gray-200 px-3 py-2 bg-gray-50">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2 text-sm">
+                <div class="flex items-center gap-2">
+                    <label class="text-[11px] font-semibold text-gray-600 uppercase whitespace-nowrap" for="theme-select">Theme</label>
                     <select id="theme-select"
                             @bind="SelectedTheme"
                             @bind:event="onchange"
-                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         <option value="vs">Light</option>
                         <option value="vs-dark">Dark</option>
                         <option value="hc-black">High contrast</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="font-select">Font size</label>
+                <div class="flex items-center gap-2">
+                    <label class="text-[11px] font-semibold text-gray-600 uppercase whitespace-nowrap" for="font-select">Font</label>
                     <select id="font-select"
                             @bind="FontSize"
                             @bind:event="onchange"
-                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         @foreach (var size in FontSizeOptions)
                         {
                             <option value="@size">@size px</option>
                         }
                     </select>
                 </div>
-                <div class="flex flex-col justify-center gap-2">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     <label class="inline-flex items-center gap-2">
                         <input type="checkbox" @bind="RenderSideBySide" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        Side-by-side view
+                        Side-by-side
                     </label>
                     <label class="inline-flex items-center gap-2">
                         <input type="checkbox" @bind="WordWrap" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        Word wrap
+                        Wrap
                     </label>
                 </div>
-                <div class="flex flex-col justify-center gap-2">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
                     <label class="inline-flex items-center gap-2">
                         <input type="checkbox" @bind="OriginalEditable" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                         Original editable
                     </label>
                     <label class="inline-flex items-center gap-2">
                         <input type="checkbox" @bind="ShowWhitespace" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                        Show whitespace
+                        Whitespace
                     </label>
+                    <button @onclick="ToggleViewerFullscreenAsync"
+                            class="inline-flex items-center justify-center w-7 h-7 rounded-md border border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-800 transition-colors"
+                            title="Toggle fullscreen"
+                            aria-label="Toggle fullscreen">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 3H5a2 2 0 00-2 2v3m16-5h-3a2 2 0 00-2 2v3m5 8v3a2 2 0 01-2 2h-3m-8 0H5a2 2 0 01-2-2v-3" />
+                        </svg>
+                    </button>
                 </div>
             </div>
         </div>
 
-        <div class="px-6 py-4 bg-gray-50 border-b border-gray-200">
-            <div class="flex flex-wrap gap-3 text-xs text-gray-600">
-                <span class="uppercase tracking-wide font-semibold text-gray-700">Helpful shortcuts:</span>
-                <span><kbd class="inline-block px-2 py-1 bg-white border border-gray-300 rounded">Cmd/Ctrl + F</kbd> find</span>
-                <span><kbd class="inline-block px-2 py-1 bg-white border border-gray-300 rounded">Cmd/Ctrl + S</kbd> save selection</span>
-                <span><kbd class="inline-block px-2 py-1 bg-white border border-gray-300 rounded">Alt + F1</kbd> command palette</span>
-            </div>
-        </div>
-
-        <div class="relative h-[70vh] border-t border-gray-200">
+        <div id="compare-viewer" class="relative h-[82vh] border-t border-gray-200 bg-white">
             <StandaloneDiffEditor @ref="_diffEditor"
                                   Id="diff-editor"
                                   ConstructionOptions="DiffEditorConstructionOptions"
@@ -256,6 +252,11 @@
         });
     }
 
+    private async Task ToggleViewerFullscreenAsync()
+    {
+        await JSRuntime.InvokeVoidAsync("toggleElementFullscreen", "compare-viewer");
+    }
+
     private async Task SwapSidesAsync()
     {
         if (_originalModel is null || _modifiedModel is null)
@@ -263,8 +264,8 @@
             return;
         }
 
-        var originalValue = await _originalModel.GetValue(null, null);
-        var modifiedValue = await _modifiedModel.GetValue(null, null);
+        var originalValue = await _originalModel.GetValue((EndOfLinePreference?)0, false);
+        var modifiedValue = await _modifiedModel.GetValue((EndOfLinePreference?)0, false);
 
         await _originalModel.SetValue(modifiedValue);
         await _modifiedModel.SetValue(originalValue);

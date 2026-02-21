@@ -12,7 +12,6 @@ bar and richer descriptions so you can quickly find the tool you need.
 - **Compare Tool** – Review differences between two snippets of text or code with a diff viewer.
 - **Unix Timestamp Converter** – Convert timestamps to readable dates (local and UTC) and vice versa.
 - **JWT Decoder** – Inspect JSON Web Tokens completely offline with formatted JSON and claim summaries.
-- **Regex Tester** – Experiment with regular expressions, highlight matches, and preview replacements in real time.
 
 ## Development
 

@@ -1,102 +1,160 @@
-﻿@page "/replacelinebreaks"
+@page "/replacelinebreaks"
 @inject IJSRuntime JSRuntime
 
-<div class="max-w-screen-xl mx-auto space-y-8">
+<div class="max-w-screen-xl mx-auto space-y-3">
     <div>
-        <h1 class="text-3xl font-bold text-gray-800">Line Break Toolkit</h1>
-        <p class="text-gray-600 mt-2">
-            Clean, deduplicate, and reshape line-based content into the exact format you need. Configure the delimiter,
-            quoting, sort order, and generate SQL helper scripts without touching a text editor.
+        <h1 class="text-2xl font-bold text-gray-800">Line Break Toolkit</h1>
+        <p class="text-gray-600 mt-1 text-sm">
+            Paste values and generate clean output quickly. The tool can auto-detect pasted numeric vs text values and choose the right CSV format.
         </p>
     </div>
 
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6 p-6">
+        <div class="p-2 border-b border-gray-200 bg-gray-50">
+            <div class="grid grid-cols-1 xl:grid-cols-[1fr_1fr_auto] gap-2 items-start">
+                <div class="border border-orange-200 bg-orange-50 rounded-md p-2">
+                    <p class="text-[10px] font-semibold uppercase tracking-wide text-orange-800 mb-1">Format</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button @onclick="BuildDistinctSortedCsv"
+                                class="px-2.5 py-1 text-xs font-semibold bg-orange-600 text-white rounded hover:bg-orange-700 transition-colors">
+                            Distinct + Sorted CSV
+                        </button>
+                        <button @onclick="BuildDistinctSortedQuotedCsv"
+                                class="px-2.5 py-1 text-xs font-semibold bg-amber-600 text-white rounded hover:bg-amber-700 transition-colors">
+                            Distinct + Sorted + Quoted CSV
+                        </button>
+                    </div>
+                </div>
+
+                <div class="border border-emerald-200 bg-emerald-50 rounded-md p-2">
+                    <p class="text-[10px] font-semibold uppercase tracking-wide text-emerald-800 mb-1">SQL</p>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button @onclick="CreateSQLTemp"
+                                class="px-2.5 py-1 text-xs font-semibold bg-blue-700 text-white rounded hover:bg-blue-800 transition-colors">
+                            Single-column temp table
+                        </button>
+                        <button @onclick="CreateMultiColumnSQLTemp"
+                                class="px-2.5 py-1 text-xs font-semibold bg-slate-600 text-white rounded hover:bg-slate-700 transition-colors">
+                            Multi-column temp table
+                        </button>
+                        <button @onclick="BuildInsertStatements"
+                                class="px-2.5 py-1 text-xs font-semibold bg-emerald-600 text-white rounded hover:bg-emerald-700 transition-colors">
+                            INSERT...VALUES script
+                        </button>
+                    </div>
+                </div>
+
+            <div class="xl:pt-4">
+                <button @onclick="ClearAll"
+                        class="px-2.5 py-1 text-xs font-semibold bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
+                    Clear
+                </button>
+            </div>
+        </div>
+        </div>
+
+        <details class="m-2 bg-gray-50 border border-gray-200 rounded-md p-2">
+            <summary class="cursor-pointer text-xs font-semibold text-gray-700 uppercase tracking-wide">Join options</summary>
+            <div class="pt-2 space-y-2">
+                <div class="flex flex-wrap gap-1.5">
+                    <button @onclick="ApplyCustomJoin"
+                            class="px-2.5 py-1 text-xs font-semibold bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+                        Generate joined output
+                    </button>
+                    <button @onclick="BuildJsonArray"
+                            class="px-2.5 py-1 text-xs font-semibold bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors">
+                        JSON array
+                    </button>
+                    <button @onclick="BuildMarkdownList"
+                            class="px-2.5 py-1 text-xs font-semibold bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors">
+                        Markdown list
+                    </button>
+                    <button @onclick="BuildSqlInClause"
+                            class="px-2.5 py-1 text-xs font-semibold bg-green-600 text-white rounded hover:bg-green-700 transition-colors">
+                        SQL IN clause
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="delimiter-input">Delimiter</label>
+                        <input id="delimiter-input"
+                               type="text"
+                               @bind="CustomDelimiter"
+                               class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder=", " />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="prefix-input">Prefix</label>
+                        <input id="prefix-input"
+                               type="text"
+                               @bind="WrapPrefix"
+                               class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="'" />
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="suffix-input">Suffix</label>
+                        <input id="suffix-input"
+                               type="text"
+                               @bind="WrapSuffix"
+                               class="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                               placeholder="'" />
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-1.5">
+                    <button type="button" @onclick='() => SetDelimiter(",")' class="px-2.5 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100">Comma</button>
+                    <button type="button" @onclick='() => SetDelimiter(", ")' class="px-2.5 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100">Comma + space</button>
+                    <button type="button" @onclick='() => SetDelimiter("|")' class="px-2.5 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100">Pipe</button>
+                    <button type="button" @onclick='() => SetDelimiter(";")' class="px-2.5 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100">Semicolon</button>
+                    <button type="button" @onclick="() => SetDelimiter(Environment.NewLine)" class="px-2.5 py-1 text-xs bg-white border border-gray-300 rounded hover:bg-gray-100">New line</button>
+                </div>
+
+                <div class="flex flex-wrap gap-3 text-xs text-gray-700">
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="TrimWhitespace" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Trim whitespace
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="IgnoreEmptyLines" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Ignore empty
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="DistinctValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Distinct
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="SortValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Sort ascending
+                    </label>
+                    <label class="inline-flex items-center gap-2">
+                        <input type="checkbox" @bind="WrapValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
+                        Quote/prefix/suffix values
+                    </label>
+                </div>
+            </div>
+        </details>
+
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 p-4">
             <div class="space-y-4">
-                <div>
-                    <label for="inputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">Input</label>
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                    <label for="inputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1 block">Input</label>
                     <textarea @bind="Input"
+                              @bind:event="oninput"
+                              @bind:after="OnInputChanged"
+                              @onpaste="MarkPasteIntent"
                               class="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
                               id="inputTxt"
                               placeholder="Paste each item on its own line..."></textarea>
+                    <p class="text-xs text-gray-500 mt-1">Paste auto-runs: numeric -> CSV, text -> quoted CSV.</p>
                 </div>
 
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-4">
-                    <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Join options</h2>
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="delimiter-input">Delimiter</label>
-                            <input id="delimiter-input"
-                                   type="text"
-                                   @bind="CustomDelimiter"
-                                   class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                   placeholder=", " />
-                        </div>
-                        <div class="grid grid-cols-2 gap-3">
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="prefix-input">Prefix</label>
-                                <input id="prefix-input"
-                                       type="text"
-                                       @bind="WrapPrefix"
-                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                       placeholder="'" />
-                            </div>
-                            <div>
-                                <label class="block text-xs font-semibold text-gray-600 uppercase mb-1" for="suffix-input">Suffix</label>
-                                <input id="suffix-input"
-                                       type="text"
-                                       @bind="WrapSuffix"
-                                       class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                                       placeholder="'" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap gap-4 text-sm text-gray-700">
-                        <label class="inline-flex items-center gap-2">
-                            <input type="checkbox" @bind="TrimWhitespace" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                            Trim whitespace
-                        </label>
-                        <label class="inline-flex items-center gap-2">
-                            <input type="checkbox" @bind="IgnoreEmptyLines" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                            Ignore empty
-                        </label>
-                        <label class="inline-flex items-center gap-2">
-                            <input type="checkbox" @bind="DistinctValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                            Distinct
-                        </label>
-                        <label class="inline-flex items-center gap-2">
-                            <input type="checkbox" @bind="SortValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                            Sort ascending
-                        </label>
-                        <label class="inline-flex items-center gap-2">
-                            <input type="checkbox" @bind="WrapValues" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                            Apply prefix/suffix
-                        </label>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <button @onclick="ApplyCustomJoin"
-                                class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                            Join with options
-                        </button>
-                        <button @onclick="BuildJsonArray"
-                                class="w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors">
-                            JSON array
-                        </button>
-                        <button @onclick="BuildMarkdownList"
-                                class="w-full px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors">
-                            Markdown list
-                        </button>
-                    </div>
-                </div>
             </div>
 
             <div class="space-y-4">
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3">
                     <div class="relative">
-                        <label for="outputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-2 block">Output</label>
+                        <label for="outputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1 block">Output</label>
                         <textarea @bind="Output"
                                   class="w-full h-64 p-3 border border-gray-300 rounded-md bg-white font-mono text-sm"
                                   id="outputTxt"
@@ -109,72 +167,7 @@
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                             </svg>
                         </button>
-                        <p class="text-xs text-gray-500 mt-2">@FooterString</p>
-                    </div>
-                </div>
-
-                <div class="border border-gray-200 rounded-lg overflow-hidden">
-                    <div class="flex divide-x divide-gray-200 bg-white">
-                        <button type="button"
-                                class="@GetTabButtonClass(ActionTab.Formatter)"
-                                @onclick="() => SelectTab(ActionTab.Formatter)">
-                            Formatter
-                        </button>
-                        <button type="button"
-                                class="@GetTabButtonClass(ActionTab.Sql)"
-                                @onclick="() => SelectTab(ActionTab.Sql)">
-                            SQL
-                        </button>
-                    </div>
-                    <div class="bg-gray-50 p-4">
-                        @if (ActiveTab == ActionTab.Formatter)
-                        {
-                            <div class="space-y-4">
-                                <p class="text-xs text-gray-600 leading-relaxed">
-                                    Quick presets for common formatting: grab your preferred output without touching the mouse.
-                                </p>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <button @onclick="CommaSeperation"
-                                            class="w-full px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 transition-colors">
-                                        Comma separated
-                                    </button>
-                                    <button @onclick="CommaSeperationWithQuotes"
-                                            class="w-full px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700 transition-colors">
-                                        Comma (distinct + quoted)
-                                    </button>
-                                    <button @onclick="DistinctSort"
-                                            class="w-full px-4 py-2 bg-yellow-600 text-white rounded-md hover:bg-yellow-700 transition-colors">
-                                        Distinct + sorted lines
-                                    </button>
-                                </div>
-                            </div>
-                        }
-                        else
-                        {
-                            <div class="space-y-4">
-                                <p class="text-xs text-gray-600 leading-relaxed">
-                                    Generate SQL-ready snippets without opening an editor. Choose the helper you need and paste the result.
-                                </p>
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                                    <button @onclick="BuildSqlInClause"
-                                            class="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors">
-                                        SQL IN clause
-                                    </button>
-                                    <button @onclick="CreateSQLTemp"
-                                            class="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
-                                        Single column temp table
-                                    </button>
-                                    <button @onclick="CreateMultiColumnSQLTemp"
-                                            class="w-full px-4 py-2 bg-slate-600 text-white rounded-md hover:bg-slate-700 transition-colors">
-                                        Multi column temp table
-                                    </button>
-                                    <button @onclick="BuildInsertStatements"
-                                            class="w-full px-4 py-2 bg-emerald-600 text-white rounded-md hover:bg-emerald-700 transition-colors">
-                                        INSERT ... VALUES script
-                                    </button>
-                                </div>
-                            </div>
-                        }
+                        <p class="text-xs text-gray-500 mt-1">@FooterString</p>
                     </div>
                 </div>
             </div>
@@ -185,29 +178,79 @@
 @code {
     public string? Input { get; set; }
     public string? Output { get; set; }
-    public string? FooterString { get; set; }
+    public string? FooterString { get; set; } = "Ready";
 
     private string CustomDelimiter { get; set; } = ", ";
     private string? WrapPrefix { get; set; } = "'";
     private string? WrapSuffix { get; set; } = "'";
     private bool TrimWhitespace { get; set; } = true;
     private bool IgnoreEmptyLines { get; set; } = true;
-    private bool DistinctValues { get; set; }
-    private bool SortValues { get; set; }
+    private bool DistinctValues { get; set; } = true;
+    private bool SortValues { get; set; } = true;
     private bool WrapValues { get; set; } = true;
-    private ActionTab ActiveTab { get; set; } = ActionTab.Formatter;
+    private bool AutoRunOnNextInput { get; set; }
 
-    private void SelectTab(ActionTab tab)
+    private void MarkPasteIntent()
     {
-        ActiveTab = tab;
+        AutoRunOnNextInput = true;
     }
 
-    private string GetTabButtonClass(ActionTab tab)
+    private void OnInputChanged()
     {
-        var baseClasses = "flex-1 px-4 py-2 text-sm font-semibold transition-colors focus:outline-none";
-        return ActiveTab == tab
-            ? $"{baseClasses} bg-blue-600 text-white"
-            : $"{baseClasses} bg-white text-gray-600 hover:text-gray-800";
+        if (!AutoRunOnNextInput)
+        {
+            return;
+        }
+
+        AutoRunOnNextInput = false;
+        AutoRunCommaByType();
+    }
+
+    private void AutoRunCommaByType()
+    {
+        var rows = GetBasicRows();
+        if (rows.Length == 0)
+        {
+            return;
+        }
+
+        var allNumeric = rows.All(IsNumericValue);
+        if (allNumeric)
+        {
+            BuildDistinctSortedCsv();
+            return;
+        }
+
+        BuildDistinctSortedQuotedCsv();
+    }
+
+    private static bool IsNumericValue(string value)
+    {
+        var trimmed = value.Trim();
+
+        if ((trimmed.StartsWith("'", StringComparison.Ordinal) && trimmed.EndsWith("'", StringComparison.Ordinal)) ||
+            (trimmed.StartsWith("\"", StringComparison.Ordinal) && trimmed.EndsWith("\"", StringComparison.Ordinal)))
+        {
+            trimmed = trimmed[1..^1].Trim();
+        }
+
+        return decimal.TryParse(
+            trimmed,
+            System.Globalization.NumberStyles.Number,
+            System.Globalization.CultureInfo.InvariantCulture,
+            out _);
+    }
+
+    private void SetDelimiter(string delimiter)
+    {
+        CustomDelimiter = delimiter;
+    }
+
+    private void ClearAll()
+    {
+        Input = string.Empty;
+        Output = string.Empty;
+        FooterString = "Cleared";
     }
 
     private void CreateSQLTemp()
@@ -249,18 +292,18 @@
         {
             var rows = Input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
 
-            var columHeaders = rows[0].Split('\t', StringSplitOptions.RemoveEmptyEntries);
+            var columnHeaders = rows[0].Split('\t', StringSplitOptions.RemoveEmptyEntries);
 
             System.Text.StringBuilder builder = new System.Text.StringBuilder();
             builder.Append("create table #tempdata (");
 
-            System.Text.StringBuilder colBuilder = new System.Text.StringBuilder();
-            foreach (var item in columHeaders)
+            System.Text.StringBuilder columnBuilder = new System.Text.StringBuilder();
+            foreach (var item in columnHeaders)
             {
-                colBuilder.Append($"{item} nvarchar(100) null,");
+                columnBuilder.Append($"{item} nvarchar(100) null,");
             }
 
-            builder.Append(colBuilder.ToString().Trim(','));
+            builder.Append(columnBuilder.ToString().Trim(','));
             builder.AppendLine(")");
 
             foreach (var item in rows.Skip(1))
@@ -268,9 +311,9 @@
                 builder.AppendLine();
                 builder.Append("insert into #tempdata values (");
 
-                var rowDatas = item.Split('\t', StringSplitOptions.RemoveEmptyEntries);
+                var rowData = item.Split('\t', StringSplitOptions.RemoveEmptyEntries);
                 System.Text.StringBuilder rowBuilder = new System.Text.StringBuilder();
-                foreach (var col in rowDatas)
+                foreach (var col in rowData)
                 {
                     rowBuilder.Append($"'{col}',");
                 }
@@ -280,7 +323,7 @@
             builder.AppendLine();
 
             Output = builder.ToString();
-            FooterString = $"Found {columHeaders.Length} colums and {rows.Length - 1} rows";
+            FooterString = $"Found {columnHeaders.Length} columns and {rows.Length - 1} rows";
         }
         catch (Exception ex)
         {
@@ -382,54 +425,39 @@
         FooterString = BuildFooter(items.Count);
     }
 
-    private void CommaSeperation()
+    private void BuildDistinctSortedCsv()
     {
-        if (string.IsNullOrWhiteSpace(Input))
+        var rows = GetBasicRows();
+        if (rows.Length == 0)
         {
             return;
         }
 
-        var commaSeperatedInput = Input.Replace(Environment.NewLine, ",");
-        var rows = commaSeperatedInput.Split(',', StringSplitOptions.RemoveEmptyEntries);
+        var distinctRows = rows
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(e => e, StringComparer.OrdinalIgnoreCase)
+            .ToList();
 
-        Output = string.Join(",", rows);
-        FooterString = $"Found {rows.Length} items";
+        Output = string.Join(",", distinctRows);
+        FooterString = $"Found {distinctRows.Count} distinct sorted items";
     }
 
-    private void CommaSeperationWithQuotes()
+    private void BuildDistinctSortedQuotedCsv()
     {
-        if (string.IsNullOrWhiteSpace(Input))
+        var rows = GetBasicRows();
+        if (rows.Length == 0)
         {
             return;
         }
 
-        var commaSeperatedInput = Input.Replace(Environment.NewLine, ",");
-        var rows = commaSeperatedInput.Split(',', StringSplitOptions.RemoveEmptyEntries).Distinct().OrderBy(e => e);
+        var distinctRows = rows
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .OrderBy(e => e, StringComparer.OrdinalIgnoreCase)
+            .Select(QuoteSqlString)
+            .ToList();
 
-        Output = $"'{string.Join("','", rows)}'";
-        FooterString = $"Found {rows.Count()} distinct items";
-    }
-
-    private void DistinctSort()
-    {
-        if (string.IsNullOrWhiteSpace(Input))
-        {
-            return;
-        }
-
-        var origRows = Input.Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
-        var rows = origRows.Distinct().OrderBy(e => e);
-
-        Output = string.Join(Environment.NewLine, rows);
-        var removedCount = origRows.Length - rows.Count();
-        if (removedCount > 0)
-        {
-            FooterString = $"Input has {origRows.Length} rows. Removed {removedCount} duplicates. Result has {rows.Count()} distinct rows";
-        }
-        else
-        {
-            FooterString = "No duplicates found";
-        }
+        Output = string.Join(",", distinctRows);
+        FooterString = $"Found {distinctRows.Count} distinct sorted quoted items";
     }
 
     private async Task CopyOutputToClipboard()
@@ -443,7 +471,7 @@
     private string[] GetBasicRows()
     {
         return Input?
-            .Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.RemoveEmptyEntries)
+            .Split(new[] { "\r\n", "\n", "\r", "," }, StringSplitOptions.RemoveEmptyEntries)
             .Select(row => row.Trim())
             .Where(row => !string.IsNullOrWhiteSpace(row))
             .ToArray() ?? Array.Empty<string>();
@@ -463,7 +491,7 @@
 
         if (DistinctValues)
         {
-            rows = rows.Distinct().ToList();
+            rows = rows.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
         }
 
         if (SortValues)
@@ -515,11 +543,5 @@
     {
         var withSlashesEscaped = input.Replace("\\", "\\\\", StringComparison.Ordinal);
         return withSlashesEscaped.Replace("\"", "\\\"", StringComparison.Ordinal);
-    }
-
-    private enum ActionTab
-    {
-        Formatter,
-        Sql
     }
 }
