@@ -7,82 +7,18 @@
 @using System.Text.RegularExpressions
 @inject IJSRuntime JSRuntime
 
-<div class="max-w-screen-xl mx-auto space-y-8">
+<div class="max-w-screen-xl mx-auto space-y-3">
     <div>
-        <h1 class="text-3xl font-bold text-gray-800">String Workbench</h1>
-        <p class="text-gray-600 mt-2">
-            Format, encode, and reshape text without leaving the browser. Choose an operation below—everything runs
-            locally so sensitive payloads never leave your machine.
-        </p>
+        <h1 class="text-2xl font-bold text-gray-800">String Workbench</h1>
+        <p class="text-sm text-gray-600 mt-1">Transform text quickly with all actions visible above the editors.</p>
     </div>
 
     <div class="bg-white rounded-lg shadow-md overflow-hidden">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
-            <div class="flex flex-col space-y-3">
-                <div class="flex items-center justify-between">
-                    <label for="inputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Input</label>
-                    <div class="flex items-center gap-2 text-xs">
-                        <button @onclick="PasteSampleJson"
-                                class="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
-                            Sample JSON
-                        </button>
-                        <button @onclick="ClearInput"
-                                class="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
-                            Clear
-                        </button>
-                    </div>
-                </div>
-                <textarea @bind="Input"
-                          class="w-full h-64 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
-                          id="inputTxt"
-                          placeholder="Paste or type text to transform..."></textarea>
-                <button @onclick="SwapInputAndOutput"
-                        class="self-start px-3 py-1 text-xs font-medium text-blue-600 hover:text-blue-700">
-                    Swap with output
-                </button>
-            </div>
-
-            <div class="flex flex-col space-y-3 relative">
-                <div class="flex items-center justify-between">
-                    <label for="outputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Output</label>
-                    <button @onclick="CopyOutputToClipboard"
-                            id="copy-format-output-btn"
-                            class="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
-                            title="Copy to clipboard">
-                        Copy
-                    </button>
-                </div>
-                <textarea class="w-full h-64 p-3 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm"
-                          id="outputTxt"
-                          readonly>@Output</textarea>
-                @if (!string.IsNullOrWhiteSpace(OperationMessage) || Statistics is not null)
-                {
-                    <div class="bg-gray-50 border border-gray-200 rounded-md p-3 text-xs text-gray-600 space-y-1">
-                        @if (!string.IsNullOrWhiteSpace(OperationMessage))
-                        {
-                            <p class="font-semibold text-gray-700">@OperationMessage</p>
-                        }
-                        @if (Statistics is not null)
-                        {
-                            <p>Characters: @Statistics.Characters • Words: @Statistics.Words • Lines: @Statistics.Lines • Bytes (UTF-8): @Statistics.Bytes</p>
-                            @if (Statistics.ReadingTimeMinutes.HasValue)
-                            {
-                                <p>Approx. reading time: @Statistics.ReadingTimeMinutes.Value.ToString("0.0", CultureInfo.InvariantCulture) minute(s)</p>
-                            }
-                        }
-                    </div>
-                }
-            </div>
-        </div>
-
-        <div class="border-t border-gray-200 bg-gray-50 px-6 py-6">
-            <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
-                <section class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-                    <header>
-                        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Format &amp; encode</h2>
-                        <p class="text-xs text-gray-500">Tidy structured content and convert between common encodings.</p>
-                    </header>
-                    <div class="flex flex-wrap gap-2">
+        <div class="border-b border-gray-200 bg-gray-50 p-3">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-2">
+                <section class="bg-white border border-gray-200 rounded-md p-2 space-y-2">
+                    <h2 class="text-[11px] font-semibold text-gray-700 uppercase tracking-wide">Format &amp; Encode</h2>
+                    <div class="flex flex-wrap gap-1.5">
                         <button @onclick="FormatJson" class="@($"{PillButton} bg-blue-600")">Pretty JSON</button>
                         <button @onclick="MinifyJson" class="@($"{PillButton} bg-blue-500")">Minify JSON</button>
                         <button @onclick="FormatSQL" class="@($"{PillButton} bg-green-600")">Format SQL</button>
@@ -95,15 +31,12 @@
                     </div>
                 </section>
 
-                <section class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-                    <header>
-                        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Casing &amp; naming</h2>
-                        <p class="text-xs text-gray-500">Reshape identifiers for code, documentation, and display text.</p>
-                    </header>
-                    <div class="flex flex-wrap gap-2">
-                        <button @onclick="Upper" class="@($"{PillButton} bg-purple-600")">Uppercase</button>
-                        <button @onclick="Lower" class="@($"{PillButton} bg-purple-500")">Lowercase</button>
-                        <button @onclick="TitleCase" class="@($"{PillButton} bg-teal-600")">Title case</button>
+                <section class="bg-white border border-gray-200 rounded-md p-2 space-y-2">
+                    <h2 class="text-[11px] font-semibold text-gray-700 uppercase tracking-wide">Casing &amp; Naming</h2>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button @onclick="Upper" class="@($"{PillButton} bg-purple-600")">UPPER</button>
+                        <button @onclick="Lower" class="@($"{PillButton} bg-purple-500")">lower</button>
+                        <button @onclick="TitleCase" class="@($"{PillButton} bg-teal-600")">Title Case</button>
                         <button @onclick="PascalCase" class="@($"{PillButton} bg-teal-500")">PascalCase</button>
                         <button @onclick="CamelCase" class="@($"{PillButton} bg-teal-400")">camelCase</button>
                         <button @onclick="SnakeCase" class="@($"{PillButton} bg-orange-600")">snake_case</button>
@@ -111,41 +44,67 @@
                     </div>
                 </section>
 
-                <section class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
-                    <header>
-                        <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Lines &amp; whitespace</h2>
-                        <p class="text-xs text-gray-500">Quick clean-up helpers for bulk edits.</p>
-                    </header>
-                    <div class="flex flex-wrap gap-2">
-                        <button @onclick="TrimWhitespace" class="@($"{PillButton} bg-slate-600")">Trim whitespace</button>
+                <section class="bg-white border border-gray-200 rounded-md p-2 space-y-2">
+                    <h2 class="text-[11px] font-semibold text-gray-700 uppercase tracking-wide">Lines &amp; Whitespace</h2>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button @onclick="TrimWhitespace" class="@($"{PillButton} bg-slate-600")">Trim</button>
                         <button @onclick="CollapseWhitespace" class="@($"{PillButton} bg-slate-500")">Collapse spaces</button>
                         <button @onclick="RemoveDuplicateLines" class="@($"{PillButton} bg-slate-400")">Unique lines</button>
                         <button @onclick="SortLines" class="@($"{PillButton} bg-blue-700")">Sort A→Z</button>
                         <button @onclick="ReverseLines" class="@($"{PillButton} bg-blue-500")">Reverse lines</button>
                     </div>
                 </section>
-
-                <section class="bg-white border border-gray-200 rounded-lg p-4 space-y-3 xl:col-span-3">
-                    <header class="flex items-center justify-between">
-                        <div>
-                            <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Utilities</h2>
-                            <p class="text-xs text-gray-500">Analyse, mirror, or share the current text.</p>
-                        </div>
-                        <div class="flex items-center gap-2 text-xs">
-                            <button @onclick="ReverseText" class="px-3 py-1 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 transition-colors">
-                                Reverse text
-                            </button>
-                            <button @onclick="AnalyzeText" class="px-3 py-1 bg-gray-900 text-white rounded-md hover:bg-black transition-colors">
-                                Analyse
-                            </button>
-                        </div>
-                    </header>
-                    <p class="text-xs text-gray-500">
-                        Need to restore the original input? Use the swap button above, or simply run the operation again
-                        if it is reversible (e.g. encode → decode).
-                    </p>
-                </section>
             </div>
         </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 p-3">
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label for="inputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Input</label>
+                    <div class="flex items-center gap-2 text-xs">
+                        <button @onclick="PasteSampleJson" class="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">Sample</button>
+                        <button @onclick="ClearInput" class="px-2 py-1 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">Clear</button>
+                        <button @onclick="SwapInputAndOutput" class="px-2 py-1 bg-blue-50 text-blue-700 rounded-md hover:bg-blue-100 transition-colors">Swap</button>
+                    </div>
+                </div>
+                <textarea @bind="Input"
+                          class="w-full h-56 p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-mono text-sm"
+                          id="inputTxt"
+                          placeholder="Paste or type text to transform..."></textarea>
+            </div>
+
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <label for="outputTxt" class="text-sm font-semibold text-gray-700 uppercase tracking-wide">Output</label>
+                    <button @onclick="CopyOutputToClipboard"
+                            id="copy-format-output-btn"
+                            class="px-3 py-1 bg-blue-600 text-white text-xs font-medium rounded-md hover:bg-blue-700 transition-colors"
+                            title="Copy to clipboard">
+                        Copy
+                    </button>
+                </div>
+                <textarea class="w-full h-56 p-3 border border-gray-300 rounded-md bg-gray-50 font-mono text-sm"
+                          id="outputTxt"
+                          readonly>@Output</textarea>
+            </div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(OperationMessage) || Statistics is not null)
+        {
+            <div class="border-t border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600 space-y-1">
+                @if (!string.IsNullOrWhiteSpace(OperationMessage))
+                {
+                    <p class="font-semibold text-gray-700">@OperationMessage</p>
+                }
+                @if (Statistics is not null)
+                {
+                    <p>Characters: @Statistics.Characters • Words: @Statistics.Words • Lines: @Statistics.Lines • Bytes (UTF-8): @Statistics.Bytes</p>
+                    @if (Statistics.ReadingTimeMinutes.HasValue)
+                    {
+                        <p>Approx. reading time: @Statistics.ReadingTimeMinutes.Value.ToString("0.0", CultureInfo.InvariantCulture) minute(s)</p>
+                    }
+                }
+            </div>
+        }
     </div>
 </div>

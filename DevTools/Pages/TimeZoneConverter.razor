@@ -2,46 +2,43 @@
 @using System.Globalization
 @using System.Linq
 
-<div class="max-w-screen-xl mx-auto space-y-8">
+<div class="max-w-screen-xl mx-auto space-y-3">
     <div>
-        <h1 class="text-3xl font-bold text-gray-800">Time Zone Converter</h1>
-        <p class="text-gray-600 mt-2">
-            Compare local times across popular zones without leaving the browser. Pick a source region, choose a target,
-            and see the converted instant alongside quick references for other hubs.
-        </p>
+        <h1 class="text-2xl font-bold text-gray-800">Time Zone Converter</h1>
+        <p class="text-sm text-gray-600 mt-1">Convert a date-time between source and target zones.</p>
     </div>
 
     <section class="bg-white rounded-lg shadow-md overflow-hidden">
-        <header class="border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <header class="border-b border-gray-200 px-3 py-2 flex items-center justify-between">
             <div>
-                <h2 class="text-lg font-semibold text-gray-800">Convert between zones</h2>
+                <h2 class="text-sm font-semibold text-gray-800 uppercase tracking-wide">Convert between zones</h2>
                 <p class="text-xs text-gray-500">Handles daylight-saving shifts automatically.</p>
             </div>
             <button @onclick="UseCurrentInstant"
-                    class="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Use current time
+                    class="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                Now
             </button>
         </header>
 
-        <div class="p-6 space-y-6">
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="p-3 space-y-3">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
                 <div>
-                    <label for="timezone-input" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1">
+                    <label for="timezone-input" class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">
                         Source date &amp; time
                     </label>
                     <input id="timezone-input"
                            type="datetime-local"
                            @bind="InputLocalTime"
                            @bind:format="yyyy-MM-ddTHH:mm"
-                           class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
+                           class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500" />
                 </div>
                 <div>
-                    <label for="timezone-source" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1">
+                    <label for="timezone-source" class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">
                         Interpret as
                     </label>
                     <select id="timezone-source"
                             @bind="SourceTimeZoneKey"
-                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         @foreach (var option in TimeZoneOptions)
                         {
                             <option value="@option.Key">@option.DisplayName</option>
@@ -49,12 +46,12 @@
                     </select>
                 </div>
                 <div>
-                    <label for="timezone-target" class="block text-sm font-semibold text-gray-700 uppercase tracking-wide mb-1">
+                    <label for="timezone-target" class="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">
                         Convert to
                     </label>
                     <select id="timezone-target"
                             @bind="TargetTimeZoneKey"
-                            class="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full border border-gray-300 rounded-md px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
                         @foreach (var option in TimeZoneOptions)
                         {
                             <option value="@option.Key">@option.DisplayName</option>
@@ -63,13 +60,13 @@
                 </div>
             </div>
 
-            <div class="flex flex-wrap gap-3">
+            <div class="flex flex-wrap gap-2">
                 <button @onclick="SwapZones"
-                        class="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
+                        class="px-3 py-1.5 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors">
                     Swap zones
                 </button>
                 <button @onclick="ConvertTimeZones"
-                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
+                        class="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors">
                     Convert
                 </button>
             </div>
@@ -82,10 +79,10 @@
             }
             else if (Result is not null)
             {
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="border border-gray-200 rounded-lg p-4 bg-gray-50">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
                         <span class="block text-xs uppercase text-gray-500 font-semibold mb-1">Source</span>
-                        <h3 class="text-lg font-semibold text-gray-800">@Result.SourceDisplayName</h3>
+                        <h3 class="text-base font-semibold text-gray-800">@Result.SourceDisplayName</h3>
                         <p class="text-sm text-gray-600 mb-1">@Result.SourceTimeLabel</p>
                         <p class="text-xs text-gray-500">Offset @Result.SourceOffsetLabel</p>
                         @if (Result.SourceAmbiguous)
@@ -95,9 +92,9 @@
                             </p>
                         }
                     </div>
-                    <div class="border border-blue-200 rounded-lg p-4 bg-blue-50">
+                    <div class="border border-blue-200 rounded-lg p-3 bg-blue-50">
                         <span class="block text-xs uppercase text-blue-600 font-semibold mb-1">Target</span>
-                        <h3 class="text-lg font-semibold text-gray-900">@Result.TargetDisplayName</h3>
+                        <h3 class="text-base font-semibold text-gray-900">@Result.TargetDisplayName</h3>
                         <p class="text-sm text-gray-700 mb-1">@Result.TargetTimeLabel</p>
                         <p class="text-xs text-gray-600">Offset @Result.TargetOffsetLabel</p>
                         @if (Result.TargetAmbiguous)
@@ -109,33 +106,13 @@
                     </div>
                 </div>
 
-                <div class="border border-gray-200 rounded-lg p-4 bg-white space-y-1 text-sm text-gray-700">
+                <div class="border border-gray-200 rounded-lg p-3 bg-white space-y-1 text-sm text-gray-700">
                     <div><span class="font-semibold text-gray-800">UTC instant:</span> @Result.UtcLabel</div>
                     <div><span class="font-semibold text-gray-800">Time difference:</span> @Result.DifferenceLabel</div>
                 </div>
             }
         </div>
     </section>
-
-    @if (Result is not null && ComparisonSnapshots.Count != 0)
-    {
-        <section class="bg-white rounded-lg shadow-md overflow-hidden">
-            <header class="border-b border-gray-200 px-6 py-4">
-                <h2 class="text-lg font-semibold text-gray-800">Other popular zones</h2>
-                <p class="text-xs text-gray-500">Helpful when coordinating multi-region releases or incident bridges.</p>
-            </header>
-            <div class="p-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                @foreach (var snapshot in ComparisonSnapshots)
-                {
-                    <div class="@(snapshot.IsTarget ? "rounded-lg border p-4 space-y-1 border-blue-300 bg-blue-50" : "rounded-lg border p-4 space-y-1 border-gray-200 bg-gray-50")">
-                        <p class="text-sm font-semibold text-gray-800">@snapshot.DisplayName</p>
-                        <p class="text-lg font-bold text-gray-900">@snapshot.TimeLabel</p>
-                        <p class="text-xs text-gray-500">Offset @snapshot.OffsetLabel</p>
-                    </div>
-                }
-            </div>
-        </section>
-    }
 </div>
 
 @code {
@@ -144,7 +121,6 @@
     private string TargetTimeZoneKey { get; set; } = "USEastern";
     private string? ConversionError { get; set; }
     private ConversionResult? Result { get; set; }
-    private List<ZoneSnapshot> ComparisonSnapshots { get; set; } = new();
 
     private readonly List<TimeZoneOption> TimeZoneOptions = new()
     {
@@ -179,7 +155,6 @@
     {
         ConversionError = null;
         Result = null;
-        ComparisonSnapshots = new();
 
         var sourceOption = TimeZoneOptions.FirstOrDefault(opt => opt.Key == SourceTimeZoneKey);
         var targetOption = TimeZoneOptions.FirstOrDefault(opt => opt.Key == TargetTimeZoneKey);
@@ -228,33 +203,6 @@
             sourceZone.IsAmbiguousTime(unspecified),
             targetZone.IsAmbiguousTime(targetLocal)
         );
-
-        ComparisonSnapshots = BuildSnapshots(utcInstant, targetOption);
-    }
-
-    private List<ZoneSnapshot> BuildSnapshots(DateTime utcInstant, TimeZoneOption targetOption)
-    {
-        var snapshots = new List<ZoneSnapshot>();
-        foreach (var option in TimeZoneOptions)
-        {
-            if (!TryResolveTimeZone(option, out var zone))
-            {
-                continue;
-            }
-
-            var local = TimeZoneInfo.ConvertTimeFromUtc(utcInstant, zone);
-            var offset = zone.GetUtcOffset(utcInstant);
-            snapshots.Add(new ZoneSnapshot(
-                option.DisplayName,
-                FormatDateTime(local),
-                FormatOffset(offset),
-                option.Key == targetOption.Key));
-        }
-
-        return snapshots
-            .OrderBy(snapshot => snapshot.IsTarget ? 0 : 1)
-            .ThenBy(snapshot => snapshot.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
     }
 
     private static string FormatDateTime(DateTime value) =>
@@ -334,6 +282,4 @@
         string DifferenceLabel,
         bool SourceAmbiguous,
         bool TargetAmbiguous);
-
-    private record ZoneSnapshot(string DisplayName, string TimeLabel, string OffsetLabel, bool IsTarget);
 }

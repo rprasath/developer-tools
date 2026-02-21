@@ -1,22 +1,66 @@
-# developer-tools
+# Developer Tools
 
-Progressive Web App that bundles a curated set of everyday developer utilities. The home page now features a search
-bar and richer descriptions so you can quickly find the tool you need.
+A compact Blazor WebAssembly app with practical developer utilities for text, JSON, SQL, GUIDs, timestamps, JWTs, table data, and timezone conversion.
 
-## Included tools
+## Features
 
-- **Replace Line Breaks** – Turn newline separated content into SQL statements, comma separated lists, and more.
-- **GUID Helpers** – Generate GUIDs or convert them to and from numeric representations.
-- **String Formatter** – Format JSON and SQL, convert casing, and perform URL/Base64 encoding or decoding.
-- **JSON Edit/Sort** – Sort JSON structures and drop unwanted properties before sharing data.
-- **Compare Tool** – Review differences between two snippets of text or code with a diff viewer.
-- **Unix Timestamp Converter** – Convert timestamps to readable dates (local and UTC) and vice versa.
-- **JWT Decoder** – Inspect JSON Web Tokens completely offline with formatted JSON and claim summaries.
+- Line Break Toolkit: Convert pasted lines into CSV, quoted lists, and SQL helper snippets.
+- SQL Formatter: In-place SQL formatting with clause breaks and indentation options.
+- Tabular Data Formatter: Convert between CSV, JSON, SQL, and Markdown tables.
+- String Workbench: JSON/SQL formatting, casing transforms, encoding/decoding, and line operations.
+- JSON Refiner: Validate, format/minify, sort, and prune JSON fields.
+- JSON to Code: Generate C# and TypeScript models from JSON payloads.
+- Diff Viewer: Monaco-based side-by-side comparison with fullscreen support.
+- GUID Helpers: New GUID + GUID <-> Long/Int conversions.
+- Unix Timestamp Converter: Timestamp/date round-trip (seconds and milliseconds).
+- Time Zone Converter: Convert date-time across source and target zones.
+- JWT Decoder: Decode and inspect JWT tokens locally.
 
-## Development
+## Tech Stack
 
+- .NET 10 (`net10.0`)
+- Blazor WebAssembly
+- Tailwind CSS (local bundle)
+- BlazorMonaco (diff editor)
+- Newtonsoft.Json
+
+## Getting Started
+
+### Prerequisites
+
+- .NET SDK 10.0+
+
+### Run locally
+
+```bash
+dotnet restore DevTools.sln
+dotnet build DevTools.sln
+dotnet run --project DevTools/DevTools.csproj
 ```
-dotnet build
+
+Then open the local URL printed by `dotnet run`.
+
+## Project Structure
+
+```text
+DevTools.sln
+DevTools/
+  Pages/               # Tool pages
+  Shared/              # Layout/navigation
+  wwwroot/             # Static assets and JS helpers
+  Program.cs           # Blazor WASM bootstrap
 ```
 
-Run the app with `dotnet run` inside the `DevTools` project for local testing.
+## Contributing
+
+Contributions are welcome.
+
+1. Fork the repository
+2. Create a branch
+3. Make your changes
+4. Run build locally
+5. Open a pull request
+
+## Security & Privacy
+
+Most processing is done client-side in the browser. Validate any sensitive workflow before sharing production data.
